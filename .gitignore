@@ -1,0 +1,32 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Android build
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/index.android.bundle
+android/app/src/main/res/drawable-*/
+android/app/src/main/res/raw/
+
+# iOS
+ios/build/
+ios/Pods/
+
+# React Native
+.metro-health-check*
+
+# Secrets / keys
+.env
+.env.*
+*.keystore
+!android/app/debug.keystore
+.claude/settings.local.json
+anchor/.anchor/
+anchor/target/
+
+# OS
+.DS_Store
+Thumbs.db
