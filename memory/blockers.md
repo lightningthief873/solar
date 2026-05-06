@@ -1,52 +1,51 @@
 # Blockers and Known Issues
 
+## Resolved
+
+### libvrapi.so 16KB page alignment (FIXED)
+Android 15 (API 35+) emulators require PT_LOAD segments to be 16KB-aligned.
+ViroReact's bundled libvrapi.so has misaligned segments. Fixed by replacing
+with an NDK-compiled stub (all vrapi_ symbols as no-ops, -nostdlib, patched
+ELF offsets to 16KB boundaries). The real ARM64 device is unaffected.
+Fix location: viro_renderer-release.aar in node_modules (patched in place).
+
+### Metro WSL2 tunnel (WORKAROUND)
+adb reverse tcp:8081 tcp:8081 does not bridge WSL2→Windows→Emulator.
+Workaround: bundle JS into APK assets with `npx react-native bundle` before
+assembleDebug. Metro hot reload is not available on the emulator.
+For hot reload on a real ARM64 device: `adb reverse` works fine over USB.
+
+### ABI: x86_64 emulators (ACCEPTED)
+ViroReact has no x86_64 native renderer. Only arm64-v8a builds are supported.
+API 33 emulators (x86_64 only) cannot install our APK.
+API 37 emulators (x86_64 + arm64 via Berberis) work with the patched lib.
+Real ARM64 devices work without any workaround.
+
 ## Active
 
 None.
 
 ## Pre-Emptive Risks
 
-### ViroReact Windows Build
-
-ViroReact requires CMake + NDK. On Windows this triggers VS C++ build tools.
-If build fails with "CMake not found": open Android Studio SDK Manager,
-install CMake 3.22.x explicitly, then retry.
-
-### ARCore in Emulator
-
-Needs: Google Play system image + Hardware GLES 2.0 in AVD config.
-Symptom if misconfigured: black AR view with no error.
-Fix: recreate AVD with "Google Play" image (not "Google APIs" — different).
-
 ### MWA on Emulator
-
 MWA requires a wallet app installed on the emulator device.
 Before Prompt 3: sideload Phantom or Ultimate Wallet APK via:
   adb install phantom.apk
 Get the APK from the official Phantom GitHub releases.
 
 ### Bubblegum v2 Merkle Tree
-
 A Merkle tree must be created before any cNFT can be minted.
 Create it once in seedDrops.ts using createTree() from mpl-bubblegum.
 Save the tree address in decisions.md — it persists on Devnet.
 
-### Windows Path Separators
-
-All paths in TypeScript/JS code must use forward slashes.
-Backslashes in require() or import paths will break the bundler.
-
-### Node 24 + Gradle
-
-If Gradle complains about Node version, pin engines in package.json:
-  "engines": { "node": ">=18" }
-This doesn't downgrade Node, it just silences the check.
+### Metro on Real Device
+For hot reload on a real phone connected via USB:
+  adb reverse tcp:8081 tcp:8081  # works on USB, not emulator
+  npx react-native start --port 8081
+Then open the app — it will auto-connect.
 
 ## Deferred (out of scope for hackathon)
 
 - iOS support (ARKit)
 - Mainnet deployment
-- dApp Store submission
-- Push notifications for nearby drops
-- Secondary market trading UI
-- Anti-spoofing GPS verification (production concern)
+- x86_64 emulator full AR support

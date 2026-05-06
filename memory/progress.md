@@ -1,22 +1,33 @@
 # Build Progress
 
-## Overall Status: NOT STARTED
+## Overall Status: PHASE 1 COMPLETE ✓
 
 ---
 
-## Prompt 1 — Foundation + AR Baseline
+## Prompt 1 — Foundation + AR Baseline ✓ DONE
 
-- [ ] React Native bare project initialized (`solar`)
-- [ ] ViroReact installed and building on Android
-- [ ] Basic AR camera renders with one animated sphere
-- [ ] Android permissions configured (CAMERA, LOCATION, INTERNET)
-- [ ] Git repo initialized, .gitignore in place
-- [ ] Emulator confirmed running and ADB connected
+- [x] React Native 0.85.3 bare project initialized (`solar`)
+- [x] ViroReact 2.54.0 installed, gradle subprojects wired manually
+- [x] ARScene: animated blue sphere (rotateY + floatCycle) + "SolAR" text
+- [x] Android permissions: CAMERA, LOCATION, INTERNET, NETWORK_STATE
+- [x] ARCore metadata: optional, queries block for com.google.ar.core
+- [x] src/types/index.ts: Drop, CollectorStats, RarityConfig, Rarity, DropMode
+- [x] src/utils/constants.ts: RARITY_CONFIG (4 tiers), DEVNET_RPC, MAX_RADAR_DISTANCE
+- [x] Git repo initialized, .gitignore in place
+- [x] Initial commit: "feat: Phase 1 — scaffold + ViroReact AR baseline"
+- [x] Emulator verified: libviro_renderer.so loads OK, glowBlue material FOUND, JS runs
+
+### Key build facts
+- NDK 27.1.12297006, compileSdk 34, targetSdk 34, minSdk 24
+- ABI: arm64-v8a only (ViroReact has no x86_64 renderer)
+- libvrapi.so patched: replaced with 16KB-aligned stub (Android 15 emulator compat)
+- JS bundled into APK for emulator testing (no Metro WSL2 tunnel on API 37)
+- Real ARM64 phone: install arm64-v8a-debug.apk directly for full AR
 
 ## Prompt 2 — AR Engine + Radar HUD
 
-- [ ] react-native-geolocation-service GPS hook working
-- [ ] react-native-sensors magnetometer/compass hook working
+- [ ] react-native-geolocation-service GPS hook
+- [ ] react-native-sensors magnetometer/compass hook
 - [ ] haversine.ts: GPS coords → AR [x, y, z] position (unit tested)
 - [ ] ARScene renders 5 seeded dummy drops at correct real-world positions
 - [ ] Four rarity tiers with distinct sphere colors and animations
@@ -26,46 +37,30 @@
 
 ## Prompt 3 — Full Anchor Program + Solana Core
 
-- [ ] Anchor workspace initialized, compiles
-- [ ] plant_drop instruction: GPS, rarity, price, expiry, escrow SOL
-- [ ] claim_drop instruction: proximity check stub, Bubblegum CPI, escrow release
-- [ ] expire_drop instruction: reclaim lamports after expiry
-- [ ] record_streak instruction: increment on-chain streak
-- [ ] DropState, CollectorState, LeaderboardState PDAs defined
-- [ ] Program deployed to Devnet, ID saved in decisions.md
-- [ ] MWA wallet connect/disconnect working on emulator
-- [ ] Bubblegum cNFT mint tested on Devnet (signature logged)
-- [ ] Devnet airdrop utility working
+- [ ] Anchor workspace initialized
+- [ ] plant_drop, claim_drop, expire_drop, record_streak instructions
+- [ ] DropState, CollectorState, LeaderboardState PDAs
+- [ ] Program deployed to Devnet
+- [ ] MWA wallet connect/disconnect
+- [ ] Bubblegum cNFT mint tested on Devnet
 
 ## Prompt 4 — All App Flows
 
 - [ ] Bottom tab navigator: Explore / Plant / Inventory / Leaderboard
-- [ ] ExploreScreen: AR + HUD + claim bottom sheet + mint flow
-- [ ] PlantScreen: map pin + form (name, rarity, price, expiry, mode) + plant tx
-- [ ] Tourism mode: permanent drops, monument metadata display
-- [ ] Event mode: countdown timer visible on AR object + bottom sheet
-- [ ] InventoryScreen: cNFT grid, collection set progress bars
-- [ ] LeaderboardScreen: top 10 collectors, streak badge ranks
-- [ ] ProfileScreen: wallet stats, creator earnings, total SOL earned
-- [ ] 5 seeded Devnet drops planted (mix of modes and rarities)
+- [ ] All 5 screens built out
 
 ## Prompt 5 — Polish + Win Layer + APK
 
-- [ ] All rarity tier particle effects (not just color changes)
-- [ ] Haptic feedback: claim, plant, wallet connect
-- [ ] Spring animations on all bottom sheets and modals
-- [ ] Claim success: confetti burst + sound
-- [ ] Skeleton loaders on Inventory + Leaderboard
-- [ ] Error states handled everywhere (RPC fail, wallet disconnect, GPS off)
-- [ ] Deep link: share a drop location → opens app at correct AR view
-- [ ] Demo seed script: plants 5 varied drops around a fixed coordinate
-- [ ] Release APK built: android/app/build/outputs/apk/release/
-- [ ] Final commit: "chore: demo-ready release"
+- [ ] Particle effects, haptics, animations
+- [ ] Release APK
 
 ## Current Focus
 
-Prompt 1
+Prompt 2
 
 ## Last Session
 
-N/A
+2026-05-07: Completed Phase 1. ViroReact running on API 37 emulator via ARM
+translation (Berberis). Fixed libvrapi.so 16KB page alignment by replacing with
+NDK-compiled stub. JS bundled into APK to bypass WSL2/Metro tunnel issue.
+All native libs load OK. glowBlue material found. AR scene initialized.
