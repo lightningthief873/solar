@@ -1,6 +1,6 @@
 # Build Progress
 
-## Overall Status: PHASE 2 COMPLETE ✓
+## Overall Status: PHASE 3 COMPLETE ✓ (deploy pending SOL)
 
 ---
 
@@ -53,14 +53,38 @@
 
 ---
 
-## Prompt 3 — Full Anchor Program + Solana Core
+## Prompt 3 — Anchor Program + Solana Core ✓ DONE
 
-- [ ] Anchor workspace initialized
-- [ ] plant_drop, claim_drop, expire_drop, record_streak instructions
-- [ ] DropState, CollectorState, LeaderboardState PDAs
-- [ ] Program deployed to Devnet
-- [ ] MWA wallet connect/disconnect
-- [ ] Bubblegum cNFT mint tested on Devnet
+- [x] Anchor workspace initialized (anchor-lang 1.0.2, Rust, Solana CLI 3.1.14)
+- [x] plant_drop, claim_drop, expire_drop, record_streak instructions
+- [x] DropState, CollectorState, LeaderboardState PDAs
+- [x] Proximity check: bounding box in e7 fixed-point (avoids float on-chain)
+- [x] CpiContext::new takes Pubkey in Anchor 1.0 (Solana 3.x SDK)
+- [x] anchor-lang init-if-needed feature enabled
+- [x] `anchor build` passes — solar_program.so (241K) + IDL generated
+- [x] IDL copied to src/solana/idl/solar_program.json
+- [x] src/solana/rpc.ts: PDA helpers, connection, balance
+- [x] src/solana/useMWA.ts: transact()-based MWA hook
+- [x] src/solana/mintCNFT.ts: Bubblegum mintV1 + createTree via UMI
+- [x] src/contexts/WalletContext.tsx: claimDrop, plantDrop, refreshStats
+- [x] App.tsx: wrapped in WalletProvider
+- [x] TypeScript clean (tsc --noEmit passes)
+- [x] Commit: "feat: Anchor program compiled + MWA + Bubblegum cNFT layer"
+- [ ] anchor deploy — BLOCKED: devnet SOL airdrop rate-limited
+
+### Phase 3 key facts
+- Platform-tools v1.52 (496MB) — must be manually extracted if download fails:
+  `cd ~/.local/share/solana/install/releases/stable-.../platform-tools-sdk/sbf/dependencies/platform-tools && tar -xjf tmp-*.tar.bz2`
+- anchor-lang 1.0.2: CpiContext::new(program_pubkey, accounts) — NOT AccountInfo
+- pub(crate) fn handler in each instruction file (avoids re-export name clash)
+- Devnet wallet: 8R1fJhGaUH5JovHLYgatv7hDAdxFNRo6nf5cREtPVPwF — needs SOL via faucet.solana.com
+
+### Deploy steps (when SOL available)
+1. cd anchor && anchor deploy
+2. Note program ID → save to memory/decisions.md
+3. Update declare_id! in lib.rs if changed
+
+---
 
 ## Prompt 4 — All App Flows
 
@@ -74,15 +98,13 @@
 
 ## Current Focus
 
-Prompt 3
+Prompt 4
 
 ## Last Session
 
-2026-05-07: Completed Phase 2. GPS→AR Haversine bridge working. 5 drops
-seeded near Pune [18.5204, 73.8567]. RadarRing and MiniMap overlays wired.
-libvrapi.so re-patched (16KB alignment) after yarn re-fetched it during Phase 2
-installs. Fixed missing symbols (vrapi_GetTimeInSeconds, vrapi_ShowSystemUI,
-vrapi_RecenterPose). Added scripts/patch-libvrapi.py as postinstall hook.
-compileSdk bumped to 36 for androidx.core:core:1.17.0 requirement.
-App confirmed running: "ReactNativeJS: Running solar", VRTMaterialManager FOUND,
-5 materials registered, ViroAR initialized, location permission dialog appeared.
+2026-05-07: Completed Phase 3. Full Anchor program compiles (plant_drop, claim_drop,
+expire_drop, record_streak + 3 PDAs). Anchor 1.0.2 quirks resolved: CpiContext
+takes Pubkey, init-if-needed needs cargo feature, pub(crate) handlers avoid
+re-export collision. IDL generated. TypeScript layer complete: rpc.ts, useMWA.ts,
+mintCNFT.ts, WalletContext.tsx. tsc --noEmit clean. Blocked on devnet deploy
+(SOL needed — use faucet.solana.com with GitHub auth).

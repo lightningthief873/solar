@@ -23,7 +23,12 @@ Real ARM64 devices work without any workaround.
 
 ## Active
 
-None.
+### Devnet SOL — deploy blocked (2026-05-07)
+All airdrop methods rate-limited (CLI, direct RPC, faucet.solana.com requires GitHub auth).
+Wallet: 8R1fJhGaUH5JovHLYgatv7hDAdxFNRo6nf5cREtPVPwF
+Fix: use faucet.solana.com manually in a browser with GitHub login, then re-run:
+  cd anchor && anchor deploy
+After deploy, save program ID to memory/decisions.md.
 
 ## Pre-Emptive Risks
 
