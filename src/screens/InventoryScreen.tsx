@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -19,30 +19,24 @@ function rarityCount(nfts: OwnedNFT[], rarity: Rarity) {
 
 function setProgress(nfts: OwnedNFT[], required: Partial<Record<Rarity, number>>) {
   const entries = Object.entries(required) as [Rarity, number][];
-  const ratio = entries.reduce((min, [r, need]) => {
-    const have = rarityCount(nfts, r);
-    return Math.min(min, have / need);
-  }, 1);
+  const ratio = entries.reduce((min, [r, need]) => Math.min(min, rarityCount(nfts, r) / need), 1);
   return Math.min(1, ratio);
 }
 
-function NFTCard({ nft }: { nft: OwnedNFT }) {
+function NFTCard({ nft, anim }: { nft: OwnedNFT; anim: Animated.Value }) {
   const cfg = RARITY_CONFIG[nft.rarity];
   const date = new Date(nft.claimedAt).toLocaleDateString();
   return (
-    <LinearGradient
-      colors={[cfg.color + '33', '#0A0A0F']}
-      style={styles.nftCard}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <View style={[styles.rarityDot, { backgroundColor: cfg.color }]} />
-      <Text style={styles.nftName} numberOfLines={1}>{nft.name}</Text>
-      <View style={[styles.rarityPill, { borderColor: cfg.color }]}>
-        <Text style={[styles.rarityPillText, { color: cfg.color }]}>{nft.rarity.toUpperCase()}</Text>
-      </View>
-      <Text style={styles.claimedDate}>Claimed {date}</Text>
-    </LinearGradient>
+    <Animated.View style={{ flex: 1, opacity: anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }] }}>
+      <LinearGradient colors={[cfg.color + '33', '#0A0A0F']} style={styles.nftCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <View style={[styles.rarityDot, { backgroundColor: cfg.color }]} />
+        <Text style={styles.nftName} numberOfLines={1}>{nft.name}</Text>
+        <View style={[styles.rarityPill, { borderColor: cfg.color }]}>
+          <Text style={[styles.rarityPillText, { color: cfg.color }]}>{nft.rarity.toUpperCase()}</Text>
+        </View>
+        <Text style={styles.claimedDate}>Claimed {date}</Text>
+      </LinearGradient>
+    </Animated.View>
   );
 }
 
@@ -63,12 +57,18 @@ function CollectionCard({ set, nfts }: { set: typeof COLLECTION_SETS[0]; nfts: O
 }
 
 export default function InventoryScreen() {
-  const { wallet, stats, refreshStats } = useWallet();
+  const { stats, refreshStats } = useWallet();
   const [nfts, setNfts] = useState<OwnedNFT[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const animsRef = useRef<Animated.Value[]>([]);
 
   const load = useCallback(() => {
-    setNfts(getOwnedNFTs());
+    const loaded = getOwnedNFTs();
+    setNfts(loaded);
+    animsRef.current = loaded.map(() => new Animated.Value(0));
+    Animated.stagger(50, animsRef.current.map(a =>
+      Animated.spring(a, { toValue: 1, friction: 7, tension: 80, useNativeDriver: true }),
+    )).start();
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -97,16 +97,14 @@ export default function InventoryScreen() {
               </View>
             )}
           </View>
-
           <Text style={styles.sectionTitle}>Collection Sets</Text>
-          {COLLECTION_SETS.map(set => (
-            <CollectionCard key={set.id} set={set} nfts={nfts} />
-          ))}
-
+          {COLLECTION_SETS.map(set => <CollectionCard key={set.id} set={set} nfts={nfts} />)}
           <Text style={styles.sectionTitle}>Your NFTs</Text>
           {nfts.length === 0 && (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No NFTs yet — go explore! ◎</Text>
+              <Text style={styles.emptyIcon}>◎</Text>
+              <Text style={styles.emptyText}>No NFTs yet — go explore!</Text>
+              <Text style={styles.emptyHint}>Walk near a drop and tap to claim.</Text>
             </View>
           )}
         </View>
@@ -114,7 +112,9 @@ export default function InventoryScreen() {
       data={nfts}
       numColumns={2}
       keyExtractor={item => item.id}
-      renderItem={({ item }) => <NFTCard nft={item} />}
+      renderItem={({ item, index }) => (
+        <NFTCard nft={item} anim={animsRef.current[index] ?? new Animated.Value(1)} />
+      )}
       columnWrapperStyle={styles.row}
     />
   );
@@ -144,6 +144,8 @@ const styles = StyleSheet.create({
   rarityPill: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' },
   rarityPillText: { fontSize: 10, fontWeight: '700' },
   claimedDate: { color: '#555', fontSize: 10, marginTop: 4 },
-  empty: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { color: '#444', fontSize: 15 },
+  empty: { alignItems: 'center', paddingVertical: 48 },
+  emptyIcon: { fontSize: 40, marginBottom: 12 },
+  emptyText: { color: '#CCC', fontSize: 16, fontWeight: '700' },
+  emptyHint: { color: '#555', fontSize: 13, marginTop: 6 },
 });

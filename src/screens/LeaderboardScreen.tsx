@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -16,16 +17,13 @@ import { PROGRAM_ID } from '../utils/constants';
 import type { LeaderboardEntry } from '../types';
 
 const PROGRAM_PUBKEY = new PublicKey(PROGRAM_ID);
-
 const PODIUM_GRADIENT: Record<number, string[]> = {
   1: ['#F39C12', '#7D5A0A'],
   2: ['#BDC3C7', '#555'],
   3: ['#CD7F32', '#5A3710'],
 };
 
-function truncate(addr: string) {
-  return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
-}
+function truncate(addr: string) { return `${addr.slice(0, 6)}…${addr.slice(-4)}`; }
 
 function PodiumCard({ entry }: { entry: LeaderboardEntry }) {
   const colors = PODIUM_GRADIENT[entry.rank] ?? ['#333', '#111'];
@@ -41,16 +39,18 @@ function PodiumCard({ entry }: { entry: LeaderboardEntry }) {
   );
 }
 
-function ListRow({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
+function ListRow({ entry, isMe, slideAnim }: { entry: LeaderboardEntry; isMe: boolean; slideAnim: Animated.Value }) {
   return (
-    <View style={[styles.listRow, isMe && styles.listRowMe]}>
-      <Text style={styles.listRank}>#{entry.rank}</Text>
-      <Text style={[styles.listAddr, isMe && styles.listAddrMe]}>{truncate(entry.wallet)}</Text>
-      <View style={styles.listRight}>
-        <Text style={styles.listClaims}>{entry.totalClaims}</Text>
-        {entry.streak > 0 && <Text style={styles.listStreak}>🔥{entry.streak}</Text>}
+    <Animated.View style={{ transform: [{ translateX: slideAnim }], opacity: slideAnim.interpolate({ inputRange: [0, 60], outputRange: [1, 0] }) }}>
+      <View style={[styles.listRow, isMe && styles.listRowMe]}>
+        <Text style={styles.listRank}>#{entry.rank}</Text>
+        <Text style={[styles.listAddr, isMe && styles.listAddrMe]}>{truncate(entry.wallet)}</Text>
+        <View style={styles.listRight}>
+          <Text style={styles.listClaims}>{entry.totalClaims}</Text>
+          {entry.streak > 0 && <Text style={styles.listStreak}>🔥{entry.streak}</Text>}
+        </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -58,15 +58,22 @@ export default function LeaderboardScreen() {
   const { wallet } = useWallet();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const slideAnims = useRef<Animated.Value[]>([]);
 
   const load = useCallback(async () => {
     try {
+      setError(false);
       const data = await getLeaderboard(PROGRAM_PUBKEY);
       setEntries(data);
+      slideAnims.current = data.slice(3).map(() => new Animated.Value(60));
+      Animated.stagger(40, slideAnims.current.map(a =>
+        Animated.spring(a, { toValue: 0, friction: 8, tension: 100, useNativeDriver: true }),
+      )).start();
     } catch {
-      // no leaderboard data yet — show empty state
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -81,9 +88,7 @@ export default function LeaderboardScreen() {
   useEffect(() => {
     load();
     timerRef.current = setInterval(load, 30000);
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [load]);
 
   const myAddr = wallet.publicKey?.toBase58();
@@ -92,9 +97,16 @@ export default function LeaderboardScreen() {
   const rest = entries.slice(3);
 
   if (loading) {
+    return <View style={styles.center}><ActivityIndicator color="#F39C12" size="large" /></View>;
+  }
+
+  if (error) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color="#F39C12" size="large" />
+        <Text style={styles.errorText}>Failed to load leaderboard</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={load}>
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -108,16 +120,13 @@ export default function LeaderboardScreen() {
         <View>
           <Text style={styles.title}>Leaderboard</Text>
           <Text style={styles.sub}>Top collectors worldwide</Text>
-
           {entries.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>No claims yet — be the first! ◎</Text>
             </View>
           ) : (
             <>
-              <View style={styles.podiumRow}>
-                {podium.map(e => <PodiumCard key={e.wallet} entry={e} />)}
-              </View>
+              <View style={styles.podiumRow}>{podium.map(e => <PodiumCard key={e.wallet} entry={e} />)}</View>
               {rest.length > 0 && <Text style={styles.sectionTitle}>Ranks 4–10</Text>}
             </>
           )}
@@ -125,13 +134,15 @@ export default function LeaderboardScreen() {
       }
       data={rest}
       keyExtractor={item => item.wallet}
-      renderItem={({ item }) => <ListRow entry={item} isMe={item.wallet === myAddr} />}
+      renderItem={({ item, index }) => (
+        <ListRow entry={item} isMe={item.wallet === myAddr} slideAnim={slideAnims.current[index] ?? new Animated.Value(0)} />
+      )}
       ListFooterComponent={
         myEntry && myEntry.rank > 10 ? (
           <View style={styles.myRankBar}>
             <Text style={styles.myRankText}>Your rank: #{myEntry.rank} · {myEntry.totalClaims} claims</Text>
           </View>
-        ) : myEntry ? null : myAddr ? (
+        ) : myAddr && !myEntry ? (
           <View style={styles.myRankBar}>
             <Text style={styles.myRankText}>You are not on the leaderboard yet</Text>
           </View>
@@ -167,4 +178,7 @@ const styles = StyleSheet.create({
   myRankText: { color: '#F39C12', fontSize: 14, fontWeight: '700', textAlign: 'center' },
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyText: { color: '#444', fontSize: 15 },
+  errorText: { color: '#FF6B6B', fontSize: 16, fontWeight: '600', marginBottom: 16 },
+  retryBtn: { backgroundColor: '#F39C1222', borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10, borderWidth: 1, borderColor: '#F39C12' },
+  retryText: { color: '#F39C12', fontSize: 14, fontWeight: '700' },
 });

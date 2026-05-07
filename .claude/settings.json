@@ -1,0 +1,67 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Read(**)",
+      "Write(src/**)",
+      "Write(anchor/**)",
+      "Write(memory/**)",
+      "Write(CLAUDE.md)",
+      "Edit(**)",
+      "Bash(yarn:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git init:*)",
+      "Bash(adb:*)",
+      "Bash(anchor build:*)",
+      "Bash(anchor deploy:*)",
+      "Bash(anchor test:*)",
+      "Bash(anchor idl:*)",
+      "Bash(solana:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo test:*)",
+      "Bash(node:*)",
+      "Bash(tsc:*)",
+      "Bash(jest:*)",
+      "Bash(mkdir:*)",
+      "Bash(echo:*)",
+      "Bash(cat:*)",
+      "Bash(dir:*)",
+      "Bash(where:*)",
+      "Bash(type:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.solanamobile.com)",
+      "WebFetch(domain:docs.metaplex.com)",
+      "WebFetch(domain:reactnative.dev)",
+      "WebFetch(domain:reactvision.io)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(del /f:*)",
+      "Bash(format:*)",
+      "Bash(sudo:*)",
+      "Bash(git push:*)",
+      "Read(**/.env)",
+      "Read(**/*.key)",
+      "Read(**/*.pem)"
+    ],
+    "ask": [
+      "Bash(gradlew:*)",
+      "Bash(react-native run-android:*)"
+    ]
+  },
+  "attribution": {
+    "commits": false,
+    "pullRequests": false
+  },
+  "cleanupPeriodDays": 7,
+  "env": {
+    "JAVA_HOME": "/usr/lib/jvm/java-17-openjdk-amd64",
+    "ANDROID_HOME": "/home/atharav_jadhav/android_sdk"
+  }
+}
