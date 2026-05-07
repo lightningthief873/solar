@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ViroAnimatedComponent,
   ViroNode,
   ViroSphere,
   ViroText,
@@ -10,13 +9,13 @@ import { RARITY_CONFIG } from '../utils/constants';
 import { gpsToARPosition, haversineDistance } from '../utils/haversine';
 
 const RARITY_SCALE: Record<Drop['rarity'], number> = {
-  common: 0.15, rare: 0.18, legendary: 0.22, mythic: 0.28,
+  common: 0.35, rare: 0.42, legendary: 0.52, mythic: 0.65,
 };
 const RARITY_MATERIAL: Record<Drop['rarity'], string> = {
   common: 'glowBlue', rare: 'glowPurple', legendary: 'glowGold', mythic: 'glowRainbow',
 };
 const ORBIT_R: Record<Drop['rarity'], number> = {
-  common: 0.28, rare: 0.32, legendary: 0.36, mythic: 0.4,
+  common: 0.55, rare: 0.65, legendary: 0.75, mythic: 0.90,
 };
 
 interface OrbitRingProps {
@@ -28,25 +27,23 @@ interface OrbitRingProps {
   sphereRadius?: number;
 }
 
-function OrbitRing({ material, count, orbitRadius, animation, verticalTilt = 0, sphereRadius = 0.04 }: OrbitRingProps) {
+function OrbitRing({ material, count, orbitRadius, animation, verticalTilt = 0, sphereRadius = 0.08 }: OrbitRingProps) {
   const angles = Array.from({ length: count }, (_, i) => (i * 2 * Math.PI) / count);
   return (
-    <ViroAnimatedComponent animation={animation} run loop delay={0} onStart={() => {}} onFinish={() => {}}>
-      <ViroNode>
-        {angles.map((a, i) => (
-          <ViroSphere
-            key={i}
-            position={[
-              orbitRadius * Math.cos(a),
-              verticalTilt * Math.sin(2 * a),
-              orbitRadius * Math.sin(a),
-            ]}
-            radius={sphereRadius}
-            materials={[material]}
-          />
-        ))}
-      </ViroNode>
-    </ViroAnimatedComponent>
+    <ViroNode animation={{ name: animation, run: true, loop: true, delay: 0 }}>
+      {angles.map((a, i) => (
+        <ViroSphere
+          key={i}
+          position={[
+            orbitRadius * Math.cos(a),
+            verticalTilt * Math.sin(2 * a),
+            orbitRadius * Math.sin(a),
+          ]}
+          radius={sphereRadius}
+          materials={[material]}
+        />
+      ))}
+    </ViroNode>
   );
 }
 
@@ -81,51 +78,61 @@ export function DropSphere({ drop, userLat, userLng, compassHeading, onTap, onEn
   const mainR = RARITY_SCALE[r];
   const orbitRadius = ORBIT_R[r];
   const labelColor = isClaimable ? '#00FF88' : RARITY_CONFIG[r].color;
+  const distLabel = `${Math.round(distance)}m`;
 
   return (
     <ViroNode position={position} onClick={() => onTap(drop)}>
+      {/* Outer halo */}
+      <ViroSphere
+        radius={mainR * 1.5}
+        materials={['haloMat']}
+        animation={{ name: 'haloPulse', run: true, loop: true, delay: 0 }}
+      />
+
       {/* Main sphere */}
-      <ViroAnimatedComponent animation={isClaimable ? 'goldPulse' : 'floatCycle'} run loop delay={0} onStart={() => {}} onFinish={() => {}}>
-        <ViroSphere radius={mainR} materials={[mainMat]} />
-      </ViroAnimatedComponent>
+      <ViroSphere
+        radius={mainR}
+        materials={[mainMat]}
+        animation={{ name: isClaimable ? 'goldPulse' : 'floatCycle', run: true, loop: true, delay: 0 }}
+      />
 
-      {/* Common: 3 slow-orbiting blue satellites */}
       {r === 'common' && (
-        <OrbitRing material="glowBlue" count={3} orbitRadius={orbitRadius} animation="orbitSlow" />
+        <OrbitRing material="glowBlue" count={3} orbitRadius={orbitRadius} animation="orbitSlow" sphereRadius={0.07} />
       )}
-
-      {/* Rare: 6 fast purple sparkles */}
       {r === 'rare' && (
-        <OrbitRing material="glowPurple" count={6} orbitRadius={orbitRadius} animation="orbitFast" sphereRadius={0.03} />
+        <OrbitRing material="glowPurple" count={6} orbitRadius={orbitRadius} animation="orbitFast" sphereRadius={0.06} />
       )}
-
-      {/* Legendary: 8 gold, vertically tilted fountain */}
       {r === 'legendary' && (
-        <OrbitRing material="glowGold" count={8} orbitRadius={orbitRadius} animation="orbitFast" verticalTilt={0.18} sphereRadius={0.05} />
+        <OrbitRing material="glowGold" count={8} orbitRadius={orbitRadius} animation="orbitFast" verticalTilt={0.25} sphereRadius={0.09} />
       )}
-
-      {/* Mythic: inner CW ring + outer CCW ring */}
       {r === 'mythic' && (
         <>
-          <OrbitRing material="glowRainbow" count={6} orbitRadius={orbitRadius * 0.8} animation="orbitFast" sphereRadius={0.04} />
-          <OrbitRing material="glowPink" count={8} orbitRadius={orbitRadius * 1.25} animation="orbitReverse" sphereRadius={0.03} />
+          <OrbitRing material="glowRainbow" count={6} orbitRadius={orbitRadius * 0.8} animation="orbitFast" sphereRadius={0.08} />
+          <OrbitRing material="glowPink" count={8} orbitRadius={orbitRadius * 1.25} animation="orbitReverse" sphereRadius={0.06} />
         </>
       )}
 
-      {/* Shockwave: one-shot ring on entering claim range */}
       {showShockwave && (
-        <ViroAnimatedComponent animation="shockwave" run loop={false} delay={0} onStart={() => {}} onFinish={() => setShowShockwave(false)}>
-          <ViroSphere radius={mainR * 1.05} materials={['shockwaveMat']} />
-        </ViroAnimatedComponent>
+        <ViroSphere
+          radius={mainR * 1.05}
+          materials={['shockwaveMat']}
+          animation={{ name: 'shockwave', run: true, loop: false, delay: 0, onFinish: () => setShowShockwave(false) }}
+        />
       )}
 
-      {/* Label / tap hint */}
       <ViroText
-        text={isClaimable ? '◎ Tap to claim' : drop.name}
-        position={[0, mainR + 0.18, 0]}
-        scale={[0.4, 0.4, 0.4]}
-        style={{ fontSize: 14, fontWeight: '600', textAlign: 'center', textAlignVertical: 'center' }}
+        text={isClaimable ? '◎ TAP TO CLAIM' : drop.name}
+        position={[0, mainR + 0.45, 0]}
+        scale={[0.65, 0.65, 0.65]}
+        style={{ fontSize: 16, fontWeight: '800', textAlign: 'center', textAlignVertical: 'center' }}
         color={labelColor}
+      />
+      <ViroText
+        text={isClaimable ? '✓ IN RANGE' : distLabel + ' away'}
+        position={[0, mainR + 0.12, 0]}
+        scale={[0.45, 0.45, 0.45]}
+        style={{ fontSize: 13, fontWeight: '600', textAlign: 'center', textAlignVertical: 'center' }}
+        color={isClaimable ? '#00FF88' : 'rgba(255,255,255,0.75)'}
       />
     </ViroNode>
   );

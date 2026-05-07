@@ -1,6 +1,6 @@
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { DEVNET_RPC } from '../utils/constants';
-import type { LeaderboardEntry, OwnedNFT } from '../types';
+import type { Drop, LeaderboardEntry, OwnedNFT } from '../types';
 
 export const connection = new Connection(DEVNET_RPC, 'confirmed');
 
@@ -67,7 +67,7 @@ export async function getLeaderboard(
   return entries;
 }
 
-// Local store for demo — in production this would be indexed from chain events
+// Local store for demo — in production indexed from chain events
 const _ownedNFTs: OwnedNFT[] = [];
 
 export function addOwnedNFT(nft: OwnedNFT): void {
@@ -76,4 +76,15 @@ export function addOwnedNFT(nft: OwnedNFT): void {
 
 export function getOwnedNFTs(): OwnedNFT[] {
   return [..._ownedNFTs];
+}
+
+// Planted drops — shared across screens so they appear immediately in AR + map
+const _plantedDrops: Drop[] = [];
+
+export function addPlantedDrop(drop: Drop): void {
+  _plantedDrops.push(drop);
+}
+
+export function getPlantedDrops(): Drop[] {
+  return [..._plantedDrops];
 }

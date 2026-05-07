@@ -1,5 +1,5 @@
-const R = 6371000; // Earth radius in meters
-const MAX_AR_DISTANCE = 50;
+const R = 6371000;
+const MAX_AR_DISTANCE = 20; // tighter cap → drops never feel impossibly far
 
 function toRad(deg: number): number {
   return deg * (Math.PI / 180);
@@ -56,5 +56,5 @@ export function gpsToARPosition(
   const x = sE * Math.cos(h) - sN * Math.sin(h);
   const z = -(sE * Math.sin(h) + sN * Math.cos(h));
 
-  return [x, 0, z];
+  return [x, 1.5, z]; // 1.5m above ground = eye level
 }

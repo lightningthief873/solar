@@ -10,12 +10,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, UrlTile, LongPressEvent } from 'react-native-maps';
+import MapView, { Marker, UrlTile, PROVIDER_GOOGLE, LongPressEvent } from 'react-native-maps';
 import HapticFeedback from 'react-native-haptic-feedback';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useGPS } from '../hooks/useGPS';
 import { useWallet } from '../contexts/WalletContext';
+import { addPlantedDrop } from '../solana/rpc';
 import { RARITY_CONFIG } from '../utils/constants';
 import type { Rarity, DropMode } from '../types';
 import type { RootTabParamList } from '../navigation/AppNavigator';
@@ -79,6 +80,19 @@ export default function PlantScreen() {
         rarity: RARITIES.indexOf(rarity), mode: mode === 'tourism' ? 0 : 1,
         priceLamports: BigInt(Math.round(priceSOL * 1e9)), expiryTs,
       });
+      // Add to shared store so it appears in AR and map immediately
+      addPlantedDrop({
+        id: `drop-planted-${dropId}`,
+        lat: pin.lat, lng: pin.lng,
+        name: name.trim(),
+        rarity,
+        priceSOL,
+        expiresAt: mode === 'event' ? Date.now() + EXPIRY_OPTIONS[expiryIdx].ms : null,
+        mode,
+        claimRadius: mode === 'event' ? 10 : 15,
+        isClaimed: false,
+        description,
+      });
       showToast('Drop planted! 🌱');
       setTimeout(() => nav.navigate('Explore'), 1200);
     } catch (e: unknown) {
@@ -99,9 +113,9 @@ export default function PlantScreen() {
             <Text style={styles.title}>Plant a Drop</Text>
             <Text style={styles.sub}>Long-press on the map to place your drop</Text>
           </View>
-          <MapView style={styles.map} mapType="none" region={region} onLongPress={handleLongPress}>
-            <UrlTile urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} flipY={false} shouldReplaceMapContent zIndex={-1} />
-            {pin && <Marker coordinate={{ latitude: pin.lat, longitude: pin.lng }} title="Drop location" pinColor="#00BFFF" />}
+          <MapView provider={PROVIDER_GOOGLE} style={styles.map} initialRegion={region} onLongPress={handleLongPress} scrollEnabled zoomEnabled rotateEnabled={false}>
+            <UrlTile urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} flipY={false} zIndex={1} />
+            {pin && <Marker coordinate={{ latitude: pin.lat, longitude: pin.lng }} title="Drop location" pinColor="#00BFFF" zIndex={2} />}
           </MapView>
           <TouchableOpacity style={[styles.confirmBtn, !pin && styles.confirmBtnDisabled]} onPress={goStep2} disabled={!pin}>
             <Text style={styles.confirmBtnText}>Confirm Location →</Text>

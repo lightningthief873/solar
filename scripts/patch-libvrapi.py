@@ -36,6 +36,7 @@ def compile_stub(clang):
         "vrapi_DestroyTextureSwapChain","vrapi_GetTextureSwapChainLength",
         "vrapi_GetTextureSwapChainHandle","vrapi_GetTextureSwapChainBufferFB",
         "vrapi_SetPropertyInt","vrapi_SetPropertyFloat","vrapi_GetPropertyFloat","vrapi_GetPropertyInt",
+        "vrapi_GetTimeInSeconds","vrapi_ShowSystemUI","vrapi_RecenterPose",
     ]
     for s in syms:
         src.write(f"void {s}(void){{}}\n")

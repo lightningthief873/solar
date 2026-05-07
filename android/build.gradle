@@ -6,6 +6,12 @@ buildscript {
         targetSdkVersion = 36
         ndkVersion = "27.1.12297006"
         kotlinVersion = "2.1.20"
+        // Force all subprojects to compile against the same play-services-location version.
+        // react-native-geolocation-service defaults to 18.0.0 where SettingsClient was a class;
+        // 21.x changed it to an interface causing IncompatibleClassChangeError at runtime.
+        googlePlayServicesVersion = "21.3.0"
+        playServicesLocationVersion = "21.3.0"
+        googlePlayServicesLocationVersion = "21.3.0"
     }
     repositories {
         google()

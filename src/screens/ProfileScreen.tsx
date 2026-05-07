@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Clipboard,
+  Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -10,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useWallet } from '../contexts/WalletContext';
-import { airdropSOL, getSOLBalance, getOwnedNFTs } from '../solana/rpc';
+import { getSOLBalance, getOwnedNFTs } from '../solana/rpc';
 import { DEVNET_RPC } from '../utils/constants';
 
 const IS_TESTNET = DEVNET_RPC.includes('testnet');
@@ -31,7 +32,6 @@ function StatCell({ label, value }: { label: string; value: string | number }) {
 export default function ProfileScreen() {
   const { wallet, connect, disconnect, stats, refreshStats } = useWallet();
   const [solBalance, setSolBalance] = useState<number | null>(null);
-  const [airdropping, setAirdropping] = useState(false);
   const [toast, setToast] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -60,18 +60,12 @@ export default function ProfileScreen() {
     fetchBalance();
   }, [fetchBalance]);
 
-  const handleAirdrop = async () => {
+  const openFaucet = () => {
     if (!wallet.publicKey) return;
-    setAirdropping(true);
-    try {
-      await airdropSOL(wallet.publicKey, 1);
-      await fetchBalance();
-      showToast('Airdropped 1 SOL! 💰');
-    } catch {
-      showToast('Airdrop failed (rate limited)');
-    } finally {
-      setAirdropping(false);
-    }
+    const addr = wallet.publicKey.toBase58();
+    Linking.openURL(`https://faucet.solana.com/?address=${addr}`).catch(() =>
+      Linking.openURL('https://faucet.solana.com'),
+    );
   };
 
   const nfts = getOwnedNFTs();
@@ -147,10 +141,11 @@ export default function ProfileScreen() {
       {IS_TESTNET && wallet.publicKey && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Developer Tools</Text>
-          <Text style={styles.devNote}>Running on {IS_TESTNET ? 'Testnet' : 'Devnet'}</Text>
-          <TouchableOpacity style={styles.airdropBtn} onPress={handleAirdrop} disabled={airdropping}>
-            {airdropping ? <ActivityIndicator color="#000" /> : <Text style={styles.airdropText}>Airdrop 1 SOL</Text>}
+          <Text style={styles.devNote}>Network: {IS_TESTNET ? 'Testnet' : 'Devnet'}</Text>
+          <TouchableOpacity style={styles.airdropBtn} onPress={openFaucet}>
+            <Text style={styles.airdropText}>Get Test SOL from Faucet ↗</Text>
           </TouchableOpacity>
+          <Text style={styles.faucetNote}>Opens faucet.solana.com with your address pre-filled</Text>
         </View>
       )}
 
@@ -185,8 +180,9 @@ const styles = StyleSheet.create({
   statLabel: { color: '#555', fontSize: 12, marginTop: 4 },
   placeholder: { color: '#444', fontSize: 14 },
   devNote: { color: '#555', fontSize: 13, marginBottom: 10 },
-  airdropBtn: { backgroundColor: '#00FF88', borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  airdropText: { color: '#000', fontSize: 15, fontWeight: '800' },
+  airdropBtn: { backgroundColor: '#00FF88', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  airdropText: { color: '#000', fontSize: 14, fontWeight: '800' },
+  faucetNote: { color: '#444', fontSize: 11, marginTop: 6, textAlign: 'center' },
   toast: { position: 'absolute', bottom: 20, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.85)', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 },
   toastText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
 });

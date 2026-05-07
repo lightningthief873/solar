@@ -10,13 +10,14 @@ import { DropSphere } from './DropSphere';
 import type { Drop } from '../types';
 
 ViroMaterials.createMaterials({
-  glowBlue:     { diffuseColor: '#4A90E2', lightingModel: 'Constant' },
-  glowPurple:   { diffuseColor: '#9B59B6', lightingModel: 'Constant' },
-  glowGold:     { diffuseColor: '#F39C12', lightingModel: 'Constant' },
+  glowBlue:     { diffuseColor: '#6AB8FF', lightingModel: 'Constant' },
+  glowPurple:   { diffuseColor: '#BF7FFF', lightingModel: 'Constant' },
+  glowGold:     { diffuseColor: '#FFD700', lightingModel: 'Constant' },
   glowRainbow:  { diffuseColor: '#FF69B4', lightingModel: 'Constant' },
   glowPink:     { diffuseColor: '#FF1493', lightingModel: 'Constant' },
   glowClaimable:{ diffuseColor: '#00FF88', lightingModel: 'Constant' },
   shockwaveMat: { diffuseColor: '#00FFFF', lightingModel: 'Constant' },
+  haloMat:      { diffuseColor: '#FFFFFF', lightingModel: 'Constant', blendMode: 'Add' },
 });
 
 ViroAnimations.registerAnimations({
@@ -37,8 +38,11 @@ ViroAnimations.registerAnimations({
   orbitSlow:    { duration: 4000, easing: 'Linear', properties: { rotateY: '360' } },
   orbitFast:    { duration: 1500, easing: 'Linear', properties: { rotateY: '360' } },
   orbitReverse: { duration: 2500, easing: 'Linear', properties: { rotateY: '-360' } },
-  shockwave:    { duration: 800,  easing: 'EaseOut',
-                  properties: { scaleX: '4', scaleY: '4', scaleZ: '4', opacity: '0' } },
+  shockwave:  { duration: 800, easing: 'EaseOut', properties: { scaleX: '4', scaleY: '4', scaleZ: '4', opacity: '0' } },
+  haloPulse:  [
+    { duration: 1200, easing: 'EaseInEaseOut', properties: { scaleX: '1.05', scaleY: '1.05', scaleZ: '1.05', opacity: '0.15' } },
+    { duration: 1200, easing: 'EaseInEaseOut', properties: { scaleX: '0.95', scaleY: '0.95', scaleZ: '0.95', opacity: '0.05' } },
+  ],
 });
 
 export interface ARSceneProps {

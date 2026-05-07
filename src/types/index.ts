@@ -22,6 +22,8 @@ export interface OwnedNFT {
   name: string;
   rarity: Rarity;
   claimedAt: number;
+  lat?: number;
+  lng?: number;
   imageUri?: string;
 }
 
