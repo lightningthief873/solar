@@ -139,104 +139,118 @@ Bearing is computed from user to drop. The compass heading rotates the entire co
 
 ---
 
-## Installing on Your Phone (iQOO Z3, Android 13)
+## Installing on Android
 
-Your iQOO Z3 runs a Snapdragon 768G with ARCore support. The APK is already built as `arm64-v8a` — it will run natively without any emulation.
+### Minimum Requirements
 
-### Step 1 — Install a Solana Wallet
+| Requirement | Minimum |
+|-------------|---------|
+| Android version | 8.0 (API 26) |
+| ARCore | Supported (check [Google's device list](https://developers.google.com/ar/devices)) |
+| CPU architecture | arm64-v8a (any 64-bit Android phone from 2018+) |
+| RAM | 3 GB |
+| Camera | Any rear camera |
+| GPS | Required (built-in on all modern phones) |
+| Storage | ~80 MB for the APK |
 
-Install **Phantom** from the Google Play Store on your iQOO Z3.
+> Most Android phones from 2018 onward meet these specs. If your phone supports Google Play AR apps, it will run SolAR.
 
-Create or import a wallet. Switch the network to **Testnet**:  
-Phantom → Settings → Developer Settings → Testnet.
+### Step 1 — Download the APK
 
-### Step 2 — Enable USB Debugging on Your Phone
+Grab the latest release from the [GitHub Releases page](https://github.com/lightningthief873/solar/releases/latest).
 
-1. Open **Settings → About phone**
-2. Tap **Build number** 7 times until you see "You are now a developer"
-3. Go back to **Settings → Additional Settings → Developer options**
-4. Enable **USB debugging**
-5. Connect your phone to your PC via USB cable
-6. On the phone, tap **Allow** when the USB debugging prompt appears
+Download `app-arm64-v8a-release.apk`.
 
-### Step 3 — Install ADB on Your PC
+Alternatively, sideload via ADB (see Step 4).
 
-**Windows (WSL / PowerShell):**
-```bash
-# If you have scoop:
-scoop install adb
+### Step 2 — Install a Solana Wallet
 
-# Or download Android Platform Tools from:
-# https://developer.android.com/tools/releases/platform-tools
-# Extract and add to PATH
-```
+Install **Phantom** from the Google Play Store.
 
-**Verify ADB sees your phone:**
+Create or import a wallet, then switch the network to **Testnet**:  
+Phantom → Settings → Developer Settings → change network to Testnet.
+
+### Step 3 — Enable USB Debugging (for ADB sideload)
+
+> Skip this step if you downloaded the APK directly to your phone and are installing it by tapping the file.
+
+1. **Settings → About phone** → tap **Build number** 7 times  
+   *(On some phones this is under Settings → Software information)*
+2. **Settings → Developer options** → enable **USB Debugging**
+3. Connect phone to PC via USB → tap **Allow** on the prompt that appears
+
+### Step 4 — Install via ADB
+
+**Install Android Platform Tools on your PC** (if you don't have `adb`):
+- Download from [developer.android.com/tools/releases/platform-tools](https://developer.android.com/tools/releases/platform-tools)
+- Extract and add the folder to your system PATH
+
+**Verify your phone is detected:**
 ```bash
 adb devices
-# Should show: <serial>   device
+# Expected: <your-serial>   device
 ```
 
-### Step 4 — Install the APK
-
+**Install the APK:**
 ```bash
-adb install -r android/app/build/outputs/apk/release/app-arm64-v8a-release.apk
+adb install -r app-arm64-v8a-release.apk
 ```
 
-You should see `Success` in the terminal and the SolAR icon appear on your phone.
+You should see `Success`. The SolAR icon will appear in your app drawer.
+
+> **Alternatively**, transfer the APK file to your phone via USB/cable, open your file manager, tap the APK, and tap Install. You may need to allow "Install from unknown sources" in Settings → Security.
 
 ### Step 5 — Grant Permissions
 
-On first launch, the app will ask for:
-- **Camera** — required for AR. Tap Allow.
-- **Location (precise)** — required for GPS drop detection. Tap Allow.
+On first launch SolAR will request:
+- **Camera** — required for AR rendering. Tap Allow.
+- **Precise Location** — required for GPS-based drop detection. Tap Allow.
+
+If you accidentally deny either, go to Settings → Apps → SolAR → Permissions and enable them manually.
 
 ### Step 6 — Connect Your Wallet and Get Testnet SOL
 
-1. Tap the **Profile** tab (bottom right)
+1. Open SolAR → tap **Profile** (bottom-right tab)
 2. Tap **Connect Wallet** → Phantom opens → tap **Connect**
-3. Back in SolAR, tap **Airdrop 1 SOL** (the green button — testnet only)
-4. Wait ~5 seconds. Your balance should show `1.0000 SOL`
+3. Back in SolAR, tap the green **Airdrop 1 SOL** button
+4. Wait ~5 seconds — your balance should update to `1.0000 SOL`
 
-> If airdrop fails with "rate limited", wait 60 seconds and try again. Testnet faucet limits are per-IP.
+> If airdrop fails with "rate limited", wait 60 seconds and try again. Testnet faucets enforce per-IP rate limits.
 
-### Step 7 — Explore AR Drops
+### Step 7 — Mock Your GPS (if not in Pune, India)
 
-1. Tap the **Explore** tab
-2. Point your camera at a wall or open space
-3. The 5 demo drops are seeded at GPS coordinates near **Pune, India [18.5204°N, 73.8567°E]**
+The 5 demo drops are seeded at **[18.5204°N, 73.8567°E]** (Pune, India). If you're not physically there, use a GPS mock app to simulate being at that location.
 
-**If you are not in Pune:** Use a GPS mock app to simulate being there.
-
-**Recommended GPS mock app:** [Fake GPS Location](https://play.google.com/store/apps/details?id=com.lexa.fakegps) (free on Play Store).
+**Recommended:** [Fake GPS Location](https://play.google.com/store/apps/details?id=com.lexa.fakegps) (free)
 
 Setup:
-1. Install Fake GPS Location
-2. Developer options → **Select mock location app** → choose Fake GPS Location
-3. In Fake GPS: search "Pune, Maharashtra" → tap the coordinate `18.5204, 73.8567` → tap Play ▶
-4. Switch back to SolAR → drops should appear in AR within a few seconds
+1. Developer options → **Select mock location app** → choose Fake GPS Location
+2. Open Fake GPS → tap the map or search for `18.5204, 73.8567` → tap **Play ▶**
+3. Switch back to SolAR — drops will appear in AR within a few seconds
 
-### Step 8 — Claim a Drop
+### Step 8 — Explore and Claim Drops
 
-1. Once GPS is near the seed location, AR spheres appear floating in your camera view
-2. The **Radar HUD** (compass ring, top-right) shows direction arrows to all nearby drops
-3. "Walk" toward a drop (or adjust mock GPS closer) — when within claim radius:
-   - Phone **vibrates**
-   - Sphere turns **green** and emits a shockwave ring
-   - "◎ Tap to claim" appears below the sphere
-4. Tap the sphere → claim sheet slides up
-5. Tap **Claim Drop**
-6. Phantom opens for signing → tap **Approve**
-7. Wait ~3 seconds → toast "Minted! 🎉"
+1. Tap the **Explore** tab → point your camera at any open surface
+2. Glowing orbs appear at their real-world positions — each one is an NFT drop
+3. The **Radar HUD** (compass ring, top-right) shows direction + distance to every drop within 200m, including ones behind you
+4. Move your mock GPS (or walk) within the claim radius of a drop:
+   - Phone **vibrates** (heavy impact haptic)
+   - Sphere turns **green** and fires a **cyan shockwave ring**
+   - Label changes to **"◎ Tap to claim"**
+5. Tap the sphere → claim sheet slides up from the bottom
+6. Tap **Claim Drop** → Phantom opens → tap **Approve**
+7. Wait ~3 seconds → "Minted! 🎉" toast appears
 
-### Step 9 — Check Your Inventory
+### Step 9 — Check Your Inventory and Leaderboard
 
-Tap **Inventory** tab — your claimed NFT appears as a gradient card with rarity colour, name, and claim date.
+- **Inventory** tab → your claimed NFT appears as a gradient card (colour matches rarity) with the claim date
+- **Leaderboard** tab → your wallet address appears after your first claim
 
-### Step 10 — Test Deep Links
+### Step 10 — Share a Drop
 
-After claiming, tap **Share Drop ↗** in the claim sheet. This copies a `solar://` URL. You can also test deep links directly:
+After a successful claim, tap **Share Drop ↗** in the claim sheet. The native share sheet opens with a `solar://` deep link. Anyone who taps that link (with SolAR installed) will have their radar centred on that drop's location.
 
+You can also test deep links directly via ADB:
 ```bash
 adb shell am start -a android.intent.action.VIEW \
   -d "solar://drop?id=drop-1&lat=18.5204&lng=73.8567" \
