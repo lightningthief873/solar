@@ -2,55 +2,76 @@
 
 ## Resolved
 
-### libvrapi.so 16KB page alignment (FIXED)
-Android 15 (API 35+) emulators require PT_LOAD segments to be 16KB-aligned.
-ViroReact's bundled libvrapi.so has misaligned segments. Fixed by replacing
+### libvrapi.so 16KB page alignment
+Android 15 (API 35+) requires PT_LOAD segments to be 16KB-aligned.
+ViroReact's bundled libvrapi.so had misaligned segments. Fixed by replacing
 with an NDK-compiled stub (all vrapi_ symbols as no-ops, -nostdlib, patched
-ELF offsets to 16KB boundaries). The real ARM64 device is unaffected.
-Fix location: viro_renderer-release.aar in node_modules (patched in place).
+ELF offsets to 16KB boundaries). Real ARM64 devices are unaffected.
+Fix: viro_renderer-release.aar in node_modules (patched in place).
 
-### Metro WSL2 tunnel (WORKAROUND)
-adb reverse tcp:8081 tcp:8081 does not bridge WSL2→Windows→Emulator.
+### Metro hot reload on WSL2
+`adb reverse tcp:8081 tcp:8081` does not bridge WSL2→Windows→emulator.
 Workaround: bundle JS into APK assets with `npx react-native bundle` before
-assembleDebug. Metro hot reload is not available on the emulator.
-For hot reload on a real ARM64 device: `adb reverse` works fine over USB.
+Gradle build. Hot reload works fine on a real USB-connected device.
 
-### ABI: x86_64 emulators (ACCEPTED)
+### ABI: x86_64 emulators
 ViroReact has no x86_64 native renderer. Only arm64-v8a builds are supported.
-API 33 emulators (x86_64 only) cannot install our APK.
-API 37 emulators (x86_64 + arm64 via Berberis) work with the patched lib.
-Real ARM64 devices work without any workaround.
+Real ARM64 devices (any phone 2018+) work without workaround.
+
+### react-native-sensors using jcenter()
+`jcenter()` was removed from Gradle 9. Fixed by patching
+`node_modules/react-native-sensors/android/build.gradle` to use `mavenCentral()`.
+Must be re-applied after a clean `yarn install`.
+
+### Anchor 1.0.2 CpiContext API change
+`CpiContext::new` takes `Pubkey` (not `AccountInfo`) in Anchor 1.0+.
+Fixed in all instructions: pass `ctx.accounts.system_program.key()` not `.to_account_info()`.
+
+### `init_if_needed` compile error
+Requires `anchor-lang = { version = "1.0.2", features = ["init-if-needed"] }` in Cargo.toml.
+Fixed.
+
+### Bubblegum v5 TransactionBuilder double-await
+`createTree()` and `mintV1()` return `Promise<TransactionBuilder>`.
+Must `await (await builder).sendAndConfirm(umi)`. Fixed in mintCNFT.ts.
+
+### Devnet airdrop rate limit during deploy
+Needed 1.71 SOL for program deploy; devnet faucet rate-limited.
+Deployed to Testnet instead. Program ID unchanged.
+Recovered a stuck buffer via: `solana program close <BUFFER_ADDR> --url testnet --bypass-warning`
 
 ## Active
 
-### Devnet deploy — needs 2+ SOL (deferred)
-Devnet airdrop rate-limited; deployed to testnet instead.
-SOLAR_RPC in constants.ts points to testnet.
-To move to devnet: fund wallet 8R1fJhGaUH5JovHLYgatv7hDAdxFNRo6nf5cREtPVPwF with 2+ SOL
-then run `solana program deploy --url devnet target/deploy/solar_program.so`
-and update DEVNET_RPC in constants.ts back to https://api.devnet.solana.com.
+### Merkle tree not initialised
+A Bubblegum merkle tree must be created on-chain before cNFT minting works
+end-to-end. `mintCNFT.ts` has the code; it just needs a real tree address.
+Fix: run `createTree()` once from `src/solana/mintCNFT.ts`, save the address
+to `constants.ts`, and pass it through the `claimDrop` flow in WalletContext.
 
-## Pre-Emptive Risks
+### Program on Testnet, not Devnet
+`DEVNET_RPC` in `constants.ts` points to `https://api.testnet.solana.com`.
+To move to devnet: fund wallet `8R1fJhGaUH5JovHLYgatv7hDAdxFNRo6nf5cREtPVPwF`
+with 2+ SOL then:
+```
+cd anchor && anchor program deploy --url devnet target/deploy/solar_program.so
+```
+Then update `DEVNET_RPC` in `constants.ts` to `https://api.devnet.solana.com`.
 
-### MWA on Emulator
-MWA requires a wallet app installed on the emulator device.
-Before Prompt 3: sideload Phantom or Ultimate Wallet APK via:
-  adb install phantom.apk
-Get the APK from the official Phantom GitHub releases.
+### NFT metadata uses placeholder URI
+`mintCNFT.ts` passes a static metadata URI. Real mints need per-rarity JSON
+uploaded to Arweave/IPFS first. Wire `@metaplex-foundation/umi-uploader-irys`
+before a production release.
 
-### Bubblegum v2 Merkle Tree
-A Merkle tree must be created before any cNFT can be minted.
-Create it once in seedDrops.ts using createTree() from mpl-bubblegum.
-Save the tree address in decisions.md — it persists on Devnet.
+### OwnedNFT store is in-memory only
+`addOwnedNFT` / `getOwnedNFTs` in `rpc.ts` use a module-level array.
+NFTs are lost on app restart. Replace with AsyncStorage or a proper
+chain-event indexer (Helius webhooks) for production.
 
-### Metro on Real Device
-For hot reload on a real phone connected via USB:
-  adb reverse tcp:8081 tcp:8081  # works on USB, not emulator
-  npx react-native start --port 8081
-Then open the app — it will auto-connect.
+## Deferred
 
-## Deferred (out of scope for hackathon)
-
-- iOS support (ARKit)
+- iOS support (requires ARKit + macOS Xcode build)
 - Mainnet deployment
-- x86_64 emulator full AR support
+- Sound effects (react-native-sound + audio assets needed)
+- x86_64 emulator AR support (no ViroReact renderer available)
+- Push notifications (Firebase Cloud Messaging)
+- Creator analytics dashboard (6th screen)

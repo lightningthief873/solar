@@ -108,7 +108,7 @@
 - OwnedNFT store is in-memory in rpc.ts (addOwnedNFT / getOwnedNFTs)
 - IS_TESTNET detected from DEVNET_RPC URL substring — dev airdrop hidden on mainnet
 
-## Prompt 5 — Polish + Win Layer + APK ✓ DONE
+## Phase 5 — Polish + Release APK ✓ DONE
 
 - [x] AR particle effects: per-rarity orbit rings (3/6/8/double), shockwave on range entry, "Tap to claim" label
 - [x] Proximity haptic: impactHeavy + toast when entering any drop's claim radius
@@ -128,7 +128,7 @@
 - `transparency` is not a valid ViroMaterial key — removed
 - Deep link pub-sub: dispatchDeepLink() in App.tsx → setDeepLinkListener() in ExploreScreen on focus
 - enableProguardInReleaseBuilds = false already set in android/app/build.gradle ✓
-- APK signed with debug.keystore (fine for hackathon demo)
+- APK signed with debug.keystore (sufficient for sideload testing)
 
 ## Current Focus
 
@@ -137,4 +137,4 @@ DONE — submit APK
 ## Last Session
 
 2026-05-07: Completed Phase 5. All polish features implemented. tsc clean.
-Committed v1.0.0-hackathon. APK at android/app/build/outputs/apk/release/app-release.apk.
+Committed v1.0.0. APK at android/app/build/outputs/apk/release/app-arm64-v8a-release.apk.

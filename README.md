@@ -4,8 +4,6 @@
 
 SolAR is a mobile augmented reality app that places glowing NFT objects at real-world GPS coordinates. Walk close enough to a drop, tap the floating orb through your camera, and a compressed NFT mints to your Solana wallet — signed entirely through Mobile Wallet Adapter. No custodial keys. No web browser. Fully on-chain.
 
-Built for **EasyA Miami — Solana Mobile Track**.
-
 ---
 
 ## What Makes This Different
@@ -48,14 +46,14 @@ Wallet connect/disconnect (Mobile Wallet Adapter). SOL balance. Stats grid (Tota
 
 ## Rarity Tiers
 
-| Tier | Colour | AR Effect | Claim Radius | Satellites |
-|------|--------|-----------|-------------|------------|
-| Common | Blue `#4A90E2` | 3 slow-orbiting blue spheres | 15m | 3 × orbitSlow (4s) |
-| Rare | Purple `#9B59B6` | 6 fast-spinning purple sparkles | 10m | 6 × orbitFast (1.5s) |
-| Legendary | Gold `#F39C12` | 8 gold spheres, vertically tilted fountain | 7m | 8 × orbitFast tilted |
-| Mythic | Pink `#FF69B4` | Inner ring CW + outer ring CCW, double halo | 5m | 6 inner + 8 outer |
+| Tier | Colour | AR Effect | Claim Radius |
+|------|--------|-----------|-------------|
+| Common | Blue `#4A90E2` | 3 satellites slow-orbit the main sphere (4s rotation) | 15m |
+| Rare | Purple `#9B59B6` | 6 satellites fast-orbit (1.5s rotation) | 10m |
+| Legendary | Gold `#F39C12` | 8 satellites in a vertically tilted orbit (fountain effect) | 7m |
+| Mythic | Pink `#FF69B4` | Dual rings: 6 inner CW + 8 outer CCW simultaneously | 5m |
 
-All tiers: main sphere turns green (`#00FF88`) + emits a cyan shockwave ring when you enter claim range.
+All tiers: on entering claim range, the sphere turns green, fires a cyan shockwave ring, and the phone vibrates.
 
 ---
 
@@ -394,7 +392,7 @@ solar/
 - **Creator Dashboard** — Add a 6th tab showing analytics for drops you planted: claim rate, revenue earned, time remaining on event drops.
 - **Social Profiles** — Let wallets set a display name + avatar (stored in a `ProfileState` PDA). Show display names on the leaderboard instead of truncated addresses.
 - **Collectible Frames** — Apply a rarity-specific frame/border image to claimed NFTs stored in the inventory, fetched from the NFT metadata URI.
-- **Clan / Group Drops** — Multi-signature drops that require N friends to claim simultaneously — useful for team events at hackathons.
+- **Clan / Group Drops** — Multi-signature drops that require N friends to claim simultaneously, useful for coordinated events.
 - **iOS Port** — ViroReact supports iOS via ARKit. The JS codebase is already cross-platform; only the MWA layer needs an iOS-compatible fallback (e.g. WalletConnect).
 
 ### Infrastructure
@@ -420,4 +418,4 @@ solar/
 
 ## License
 
-MIT — build on it, fork it, win with it.
+MIT — build on it, fork it, ship it.
