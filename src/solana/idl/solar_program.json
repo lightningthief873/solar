@@ -1,0 +1,518 @@
+{
+  "address": "EXNrAhbDZgXchu6D8i1Gup47qgKkMkTuC6FR6ehZqkQ7",
+  "metadata": {
+    "name": "solar_program",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "claim_drop",
+      "discriminator": [
+        157,
+        29,
+        89,
+        14,
+        81,
+        203,
+        107,
+        58
+      ],
+      "accounts": [
+        {
+          "name": "drop_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  114,
+                  111,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "drop_state.creator",
+                "account": "DropState"
+              },
+              {
+                "kind": "arg",
+                "path": "drop_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "collector_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  108,
+                  108,
+                  101,
+                  99,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "claimer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true
+        },
+        {
+          "name": "claimer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "drop_id",
+          "type": "u64"
+        },
+        {
+          "name": "user_lat_e7",
+          "type": "i64"
+        },
+        {
+          "name": "user_lng_e7",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "expire_drop",
+      "discriminator": [
+        185,
+        58,
+        139,
+        251,
+        235,
+        242,
+        67,
+        104
+      ],
+      "accounts": [
+        {
+          "name": "drop_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  114,
+                  111,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "drop_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "drop_state"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "drop_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "plant_drop",
+      "discriminator": [
+        238,
+        226,
+        66,
+        57,
+        223,
+        251,
+        204,
+        150
+      ],
+      "accounts": [
+        {
+          "name": "drop_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  114,
+                  111,
+                  112
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "arg",
+                "path": "drop_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "drop_id",
+          "type": "u64"
+        },
+        {
+          "name": "lat_e7",
+          "type": "i64"
+        },
+        {
+          "name": "lng_e7",
+          "type": "i64"
+        },
+        {
+          "name": "rarity",
+          "type": "u8"
+        },
+        {
+          "name": "mode",
+          "type": "u8"
+        },
+        {
+          "name": "price_lamports",
+          "type": "u64"
+        },
+        {
+          "name": "expiry_ts",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "record_streak",
+      "discriminator": [
+        100,
+        50,
+        181,
+        231,
+        4,
+        72,
+        11,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "collector_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  108,
+                  108,
+                  101,
+                  99,
+                  116,
+                  111,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "collector"
+              }
+            ]
+          }
+        },
+        {
+          "name": "leaderboard_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  101,
+                  97,
+                  100,
+                  101,
+                  114,
+                  98,
+                  111,
+                  97,
+                  114,
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "collector",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "CollectorState",
+      "discriminator": [
+        11,
+        36,
+        224,
+        9,
+        20,
+        120,
+        80,
+        39
+      ]
+    },
+    {
+      "name": "DropState",
+      "discriminator": [
+        78,
+        227,
+        64,
+        204,
+        83,
+        238,
+        174,
+        159
+      ]
+    },
+    {
+      "name": "LeaderboardState",
+      "discriminator": [
+        211,
+        181,
+        29,
+        120,
+        189,
+        4,
+        106,
+        111
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "TooFarFromDrop",
+      "msg": "Too far from drop location"
+    },
+    {
+      "code": 6001,
+      "name": "AlreadyClaimed",
+      "msg": "Drop already claimed"
+    },
+    {
+      "code": 6002,
+      "name": "DropExpired",
+      "msg": "Drop has expired"
+    },
+    {
+      "code": 6003,
+      "name": "NotYetExpired",
+      "msg": "Drop has not expired yet — wait until expiry before reclaiming"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidRarity",
+      "msg": "Invalid rarity tier (must be 0-3)"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidMode",
+      "msg": "Invalid mode (must be 0=Tourism or 1=Event)"
+    }
+  ],
+  "types": [
+    {
+      "name": "CollectorState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_claims",
+            "type": "u32"
+          },
+          {
+            "name": "streak_count",
+            "type": "u32"
+          },
+          {
+            "name": "longest_streak",
+            "type": "u32"
+          },
+          {
+            "name": "last_claim_ts",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DropState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "drop_id",
+            "type": "u64"
+          },
+          {
+            "name": "lat_e7",
+            "type": "i64"
+          },
+          {
+            "name": "lng_e7",
+            "type": "i64"
+          },
+          {
+            "name": "rarity",
+            "type": "u8"
+          },
+          {
+            "name": "mode",
+            "type": "u8"
+          },
+          {
+            "name": "price_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "expiry_ts",
+            "type": "i64"
+          },
+          {
+            "name": "is_claimed",
+            "type": "bool"
+          },
+          {
+            "name": "is_expired",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LeaderboardEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_claims",
+            "type": "u32"
+          },
+          {
+            "name": "streak",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LeaderboardState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "entries",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "LeaderboardEntry"
+                }
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

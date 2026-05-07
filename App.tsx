@@ -9,6 +9,7 @@ import { useGPS } from './src/hooks/useGPS';
 import { useCompass } from './src/hooks/useCompass';
 import { SEED_DROPS } from './src/utils/seedDrops';
 import { RARITY_CONFIG } from './src/utils/constants';
+import { WalletProvider } from './src/contexts/WalletContext';
 import type { Drop } from './src/types';
 
 // Fallback coordinates (Pune, India) used before GPS fix
@@ -34,6 +35,7 @@ export default function App(): React.JSX.Element {
   const toggleMap = useCallback(() => setShowMap(v => !v), []);
 
   return (
+    <WalletProvider>
     <GestureHandlerRootView style={styles.root}>
       {/* AR camera layer */}
       <ARScene
@@ -96,6 +98,7 @@ export default function App(): React.JSX.Element {
         </BottomSheetView>
       </BottomSheet>
     </GestureHandlerRootView>
+    </WalletProvider>
   );
 }
 
