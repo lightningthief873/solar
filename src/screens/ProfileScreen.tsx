@@ -1,18 +1,23 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Clipboard,
   Linking,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { useWallet } from '../contexts/WalletContext';
 import { getSOLBalance, getOwnedNFTs } from '../solana/rpc';
 import { DEVNET_RPC } from '../utils/constants';
+import { walletAvatar, getUsername, setUsername } from '../utils/avatar';
+import { C, R } from '../utils/design';
 
 const IS_TESTNET = DEVNET_RPC.includes('testnet');
 
@@ -20,34 +25,24 @@ function truncate(addr: string) {
   return `${addr.slice(0, 8)}…${addr.slice(-6)}`;
 }
 
-function StatCell({ label, value }: { label: string; value: string | number }) {
-  return (
-    <View style={styles.statCell}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 export default function ProfileScreen() {
   const { wallet, connect, disconnect, stats, refreshStats } = useWallet();
   const [solBalance, setSolBalance] = useState<number | null>(null);
-  const [toast, setToast] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [displayName, setDisplayName] = useState('');
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 2500);
-  };
+  useEffect(() => {
+    const n = getUsername();
+    setDisplayName(n);
+    setNameInput(n);
+  }, []);
 
   const fetchBalance = useCallback(async () => {
     if (!wallet.publicKey) return;
-    try {
-      const bal = await getSOLBalance(wallet.publicKey);
-      setSolBalance(bal);
-    } catch {
-      setSolBalance(null);
-    }
+    try { setSolBalance(await getSOLBalance(wallet.publicKey)); }
+    catch { setSolBalance(null); }
   }, [wallet.publicKey]);
 
   const onRefresh = useCallback(async () => {
@@ -56,133 +51,176 @@ export default function ProfileScreen() {
     setRefreshing(false);
   }, [refreshStats, fetchBalance]);
 
-  useEffect(() => {
-    fetchBalance();
-  }, [fetchBalance]);
+  useEffect(() => { fetchBalance(); }, [fetchBalance]);
+
+  const saveName = () => {
+    setUsername(nameInput);
+    setDisplayName(nameInput);
+    setEditingName(false);
+  };
 
   const openFaucet = () => {
     if (!wallet.publicKey) return;
-    const addr = wallet.publicKey.toBase58();
-    Linking.openURL(`https://faucet.solana.com/?address=${addr}`).catch(() =>
-      Linking.openURL('https://faucet.solana.com'),
+    Linking.openURL(`https://faucet.solana.com/?address=${wallet.publicKey.toBase58()}`).catch(
+      () => Linking.openURL('https://faucet.solana.com'),
     );
   };
 
   const nfts = getOwnedNFTs();
-  const dropsPlanted = 0; // future: fetch from chain
-  const solEarned = nfts.reduce((s, n) => s, 0); // placeholder
+  const addr = wallet.publicKey?.toBase58() ?? '';
+  const avatar = addr ? walletAvatar(addr) : null;
 
   return (
     <ScrollView
-      style={styles.root}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4A90E2" />}
+      style={s.root}
+      contentContainerStyle={s.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.accent} />}
     >
-      <Text style={styles.title}>Profile</Text>
+      <Text style={s.pageTitle}>Profile</Text>
 
-      {/* Wallet card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Wallet</Text>
-        {wallet.publicKey ? (
-          <>
+      {wallet.publicKey && avatar ? (
+        <>
+          {/* Avatar hero card */}
+          <LinearGradient
+            colors={[avatar.color + '33', C.s1]}
+            style={s.heroCard}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          >
+            <View style={[s.avatarRing, { borderColor: avatar.color }]}>
+              <Text style={s.avatarEmoji}>{avatar.emoji}</Text>
+            </View>
+
+            {editingName ? (
+              <View style={s.nameRow}>
+                <TextInput
+                  style={s.nameInput}
+                  value={nameInput}
+                  onChangeText={setNameInput}
+                  placeholder="Your name…"
+                  placeholderTextColor={C.t3}
+                  maxLength={20}
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={saveName}
+                />
+                <TouchableOpacity onPress={saveName} style={s.saveBtn}>
+                  <Text style={s.saveBtnText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => setEditingName(true)} style={s.nameRow}>
+                <Text style={s.displayName}>{displayName || 'Set your name'}</Text>
+                <Text style={s.editIcon}> ✎</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              onPress={() => { Clipboard.setString(addr); Alert.alert('Copied', 'Address copied to clipboard'); }}
+              style={s.addrRow}
+            >
+              <Text style={[s.addrText, { color: avatar.color }]}>{truncate(addr)}</Text>
+              <Text style={[s.addrCopy, { color: avatar.color }]}> ⎘</Text>
+            </TouchableOpacity>
+
             {wallet.isDemoMode && (
-              <View style={styles.demoBadge}>
-                <Text style={styles.demoText}>Demo Mode — no wallet app found</Text>
+              <View style={s.demoBadge}>
+                <Text style={s.demoText}>Demo Mode</Text>
               </View>
             )}
-            <TouchableOpacity
-              onPress={() => {
-                Clipboard.setString(wallet.publicKey!.toBase58());
-                showToast('Address copied!');
-              }}
-              style={styles.addressRow}
-            >
-              <Text style={styles.address}>{truncate(wallet.publicKey.toBase58())}</Text>
-              <Text style={styles.copyIcon}>⎘</Text>
-            </TouchableOpacity>
-            <Text style={styles.balance}>
-              {wallet.isDemoMode ? 'Demo Wallet' : solBalance !== null ? `${solBalance.toFixed(4)} SOL` : '—'}
+          </LinearGradient>
+
+          {/* Balance */}
+          <View style={s.balanceCard}>
+            <Text style={s.balanceLabel}>SOL Balance</Text>
+            <Text style={s.balanceValue}>
+              {wallet.isDemoMode ? '— Demo' : solBalance !== null ? `${solBalance.toFixed(4)} ◎` : '—'}
             </Text>
-            <TouchableOpacity style={styles.disconnectBtn} onPress={disconnect}>
-              <Text style={styles.disconnectText}>Disconnect</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <TouchableOpacity style={styles.connectBtn} onPress={connect}>
-            {wallet.isConnecting ? (
-              <ActivityIndicator color="#000" />
-            ) : (
-              <Text style={styles.connectText}>Connect Wallet</Text>
-            )}
+          </View>
+
+          {/* Stats grid */}
+          <View style={s.card}>
+            <Text style={s.cardLabel}>Activity</Text>
+            <View style={s.statsGrid}>
+              {[
+                { label: 'Claims', value: stats?.totalClaims ?? 0, color: C.green },
+                { label: 'Streak', value: stats ? `${stats.streakCount}d 🔥` : '—', color: C.orange },
+                { label: 'NFTs', value: nfts.length, color: C.accent },
+                { label: 'SOL Spent', value: '0.00 ◎', color: C.t2 },
+              ].map(({ label, value, color }) => (
+                <View key={label} style={s.statCell}>
+                  <Text style={[s.statValue, { color }]}>{value}</Text>
+                  <Text style={s.statLabel}>{label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Disconnect */}
+          <TouchableOpacity style={s.disconnectBtn} onPress={disconnect}>
+            <Text style={s.disconnectText}>Disconnect Wallet</Text>
           </TouchableOpacity>
-        )}
-      </View>
 
-      {/* Stats */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Stats</Text>
-        <View style={styles.statsGrid}>
-          <StatCell label="Total Claims" value={stats?.totalClaims ?? 0} />
-          <StatCell label="Current Streak" value={stats ? `${stats.streakCount}d 🔥` : '—'} />
-          <StatCell label="Drops Planted" value={dropsPlanted} />
-          <StatCell label="SOL Earned" value={`${solEarned.toFixed(2)} ◎`} />
-        </View>
-      </View>
-
-      {/* Creator section placeholder */}
-      {dropsPlanted > 0 && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Creator Earnings</Text>
-          <Text style={styles.placeholder}>Drop analytics coming soon.</Text>
-        </View>
-      )}
-
-      {/* Dev airdrop */}
-      {IS_TESTNET && wallet.publicKey && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Developer Tools</Text>
-          <Text style={styles.devNote}>Network: {IS_TESTNET ? 'Testnet' : 'Devnet'}</Text>
-          <TouchableOpacity style={styles.airdropBtn} onPress={openFaucet}>
-            <Text style={styles.airdropText}>Get Test SOL from Faucet ↗</Text>
+          {/* Dev tools */}
+          {IS_TESTNET && (
+            <View style={s.card}>
+              <Text style={s.cardLabel}>Developer</Text>
+              <Text style={s.devNetwork}>Solana Testnet</Text>
+              <TouchableOpacity style={s.faucetBtn} onPress={openFaucet}>
+                <Text style={s.faucetBtnText}>Get Test SOL from Faucet ↗</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </>
+      ) : (
+        <View style={s.connectCard}>
+          <Text style={s.connectTitle}>Connect your wallet</Text>
+          <Text style={s.connectSub}>Link Phantom or use demo mode to explore the app.</Text>
+          <TouchableOpacity style={s.connectBtn} onPress={connect} disabled={wallet.isConnecting}>
+            {wallet.isConnecting
+              ? <ActivityIndicator color="#000" />
+              : <Text style={s.connectBtnText}>Connect Wallet</Text>}
           </TouchableOpacity>
-          <Text style={styles.faucetNote}>Opens faucet.solana.com with your address pre-filled</Text>
-        </View>
-      )}
-
-      {toast !== '' && (
-        <View style={styles.toast}>
-          <Text style={styles.toastText}>{toast}</Text>
         </View>
       )}
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0A0A0F' },
-  content: { padding: 16, paddingTop: 56, paddingBottom: 40 },
-  title: { color: '#FFF', fontSize: 26, fontWeight: '900', marginBottom: 20 },
-  card: { backgroundColor: '#111118', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#222' },
-  cardTitle: { color: '#777', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 },
-  addressRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  address: { color: '#4A90E2', fontSize: 15, fontWeight: '600', flex: 1 },
-  copyIcon: { color: '#4A90E2', fontSize: 18 },
-  balance: { color: '#FFF', fontSize: 28, fontWeight: '900', marginTop: 8 },
-  connectBtn: { backgroundColor: '#4A90E2', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  connectText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
-  demoBadge: { backgroundColor: '#FF980022', borderWidth: 1, borderColor: '#FF9800', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginBottom: 10 },
-  demoText: { color: '#FF9800', fontSize: 12, fontWeight: '600' },
-  disconnectBtn: { marginTop: 14, borderWidth: 1, borderColor: '#333', borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
-  disconnectText: { color: '#666', fontSize: 14 },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+  content: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 48 },
+  pageTitle: { color: C.t1, fontSize: 34, fontWeight: '800', marginBottom: 24, letterSpacing: -0.5 },
+  heroCard: { borderRadius: R.xl, padding: 24, alignItems: 'center', marginBottom: 12 },
+  avatarRing: { width: 88, height: 88, borderRadius: 44, borderWidth: 3, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
+  avatarEmoji: { fontSize: 44 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  nameInput: { color: C.t1, fontSize: 20, fontWeight: '700', borderBottomWidth: 1, borderBottomColor: C.accent, paddingHorizontal: 8, paddingBottom: 4, minWidth: 140, textAlign: 'center' },
+  saveBtn: { backgroundColor: C.accent, borderRadius: R.sm, paddingHorizontal: 14, paddingVertical: 7, marginLeft: 10 },
+  saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  displayName: { color: C.t1, fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
+  editIcon: { color: C.t3, fontSize: 16 },
+  addrRow: { flexDirection: 'row', alignItems: 'center' },
+  addrText: { fontSize: 14, fontWeight: '600' },
+  addrCopy: { fontSize: 16 },
+  demoBadge: { marginTop: 10, backgroundColor: 'rgba(255,159,10,0.2)', borderRadius: R.sm, paddingHorizontal: 12, paddingVertical: 4 },
+  demoText: { color: C.orange, fontSize: 12, fontWeight: '700' },
+  balanceCard: { backgroundColor: C.s1, borderRadius: R.lg, padding: 20, marginBottom: 12, alignItems: 'center' },
+  balanceLabel: { color: C.t3, fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 },
+  balanceValue: { color: C.t1, fontSize: 40, fontWeight: '800', marginTop: 6, letterSpacing: -1 },
+  card: { backgroundColor: C.s1, borderRadius: R.lg, padding: 16, marginBottom: 12 },
+  cardLabel: { color: C.t3, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 14 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  statCell: { width: '47%', backgroundColor: '#0D0D16', borderRadius: 12, padding: 14, alignItems: 'center' },
-  statValue: { color: '#FFF', fontSize: 22, fontWeight: '900' },
-  statLabel: { color: '#555', fontSize: 12, marginTop: 4 },
-  placeholder: { color: '#444', fontSize: 14 },
-  devNote: { color: '#555', fontSize: 13, marginBottom: 10 },
-  airdropBtn: { backgroundColor: '#00FF88', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  airdropText: { color: '#000', fontSize: 14, fontWeight: '800' },
-  faucetNote: { color: '#444', fontSize: 11, marginTop: 6, textAlign: 'center' },
-  toast: { position: 'absolute', bottom: 20, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.85)', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 },
-  toastText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+  statCell: { width: '47%', backgroundColor: C.s2, borderRadius: R.md, padding: 16 },
+  statValue: { fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
+  statLabel: { color: C.t3, fontSize: 12, marginTop: 4 },
+  disconnectBtn: { backgroundColor: C.s1, borderRadius: R.lg, paddingVertical: 16, alignItems: 'center', marginBottom: 12 },
+  disconnectText: { color: C.red, fontSize: 16, fontWeight: '700' },
+  devNetwork: { color: C.t3, fontSize: 13, marginBottom: 10 },
+  faucetBtn: { backgroundColor: C.green, borderRadius: R.md, paddingVertical: 14, alignItems: 'center' },
+  faucetBtnText: { color: '#000', fontSize: 14, fontWeight: '800' },
+  connectCard: { backgroundColor: C.s1, borderRadius: R.xl, padding: 32, alignItems: 'center' },
+  connectTitle: { color: C.t1, fontSize: 22, fontWeight: '800', marginBottom: 8 },
+  connectSub: { color: C.t2, fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  connectBtn: { backgroundColor: C.accent, borderRadius: R.md, paddingVertical: 16, paddingHorizontal: 40 },
+  connectBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
 });

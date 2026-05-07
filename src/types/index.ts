@@ -1,6 +1,8 @@
 export type Rarity = 'common' | 'rare' | 'legendary' | 'mythic';
 export type DropMode = 'tourism' | 'event';
 
+export type ArtStyle = 'cosmic' | 'neon' | 'gold' | 'storm' | 'phoenix' | 'default';
+
 export interface Drop {
   id: string;
   lat: number;
@@ -14,6 +16,8 @@ export interface Drop {
   isClaimed: boolean;
   creator?: string;
   description?: string;
+  artStyle?: ArtStyle;
+  imageUri?: string;
 }
 
 export interface OwnedNFT {
@@ -25,6 +29,7 @@ export interface OwnedNFT {
   lat?: number;
   lng?: number;
   imageUri?: string;
+  artStyle?: ArtStyle;
 }
 
 export interface LeaderboardEntry {
@@ -32,6 +37,7 @@ export interface LeaderboardEntry {
   totalClaims: number;
   streak: number;
   rank: number;
+  username?: string;
 }
 
 export interface CollectorStats {

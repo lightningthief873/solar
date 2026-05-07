@@ -2,23 +2,22 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   FlatList,
+  Image,
   RefreshControl,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useWallet } from '../contexts/WalletContext';
 import { getOwnedNFTs } from '../solana/rpc';
 import { COLLECTION_SETS, RARITY_CONFIG } from '../utils/constants';
+import { C, R } from '../utils/design';
+import { ART_STYLES } from '../utils/artStyles';
 import type { OwnedNFT, Rarity } from '../types';
 
 const RARITY_ICON: Record<Rarity, string> = {
   common: '🌿', rare: '💎', legendary: '🔥', mythic: '🌟',
-};
-const RARITY_TAGLINE: Record<Rarity, string> = {
-  common: 'Common Claim', rare: 'Rare Find', legendary: 'Legendary Drop', mythic: 'Mythic Artifact',
 };
 
 function rarityCount(nfts: OwnedNFT[], rarity: Rarity) {
@@ -31,73 +30,95 @@ function setProgress(nfts: OwnedNFT[], required: Partial<Record<Rarity, number>>
   return Math.min(1, ratio);
 }
 
+function NFTArt({ nft }: { nft: OwnedNFT }) {
+  const cfg = RARITY_CONFIG[nft.rarity];
+  const art = ART_STYLES[nft.artStyle ?? 'default'];
+  return (
+    <View style={nftS.artPanel}>
+      {nft.imageUri ? (
+        <Image source={{ uri: nft.imageUri }} style={nftS.artImage} resizeMode="cover" />
+      ) : (
+        <LinearGradient
+          colors={art ? art.colors : [cfg.color + '55', cfg.color + '11']}
+          style={nftS.artFill}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        >
+          <Text style={nftS.artEmoji}>{art?.emoji ?? RARITY_ICON[nft.rarity]}</Text>
+        </LinearGradient>
+      )}
+      <View style={[nftS.rarityPill, { backgroundColor: cfg.color + '33', borderColor: cfg.color }]}>
+        <Text style={[nftS.rarityPillText, { color: cfg.color }]}>{nft.rarity.toUpperCase()}</Text>
+      </View>
+    </View>
+  );
+}
+
+const nftS = StyleSheet.create({
+  artPanel: { height: 120, overflow: 'hidden', position: 'relative' },
+  artFill: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  artImage: { ...StyleSheet.absoluteFill, width: '100%', height: '100%' },
+  artEmoji: { fontSize: 46 },
+  rarityPill: { position: 'absolute', bottom: 8, right: 8, borderRadius: R.pill, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  rarityPillText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+});
+
 function NFTCard({ nft, anim }: { nft: OwnedNFT; anim: Animated.Value }) {
   const cfg = RARITY_CONFIG[nft.rarity];
-  const date = new Date(nft.claimedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
-  const coord = nft.lat != null ? `${nft.lat.toFixed(4)}°N ${nft.lng?.toFixed(4)}°E` : 'Unknown location';
+  const date = new Date(nft.claimedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  const coord = nft.lat != null ? `${nft.lat.toFixed(3)}°, ${nft.lng?.toFixed(3)}°` : '—';
 
   return (
     <Animated.View style={[
-      styles.cardWrap,
-      { opacity: anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }) }] },
+      s.cardWrap,
+      { opacity: anim, transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] },
     ]}>
-      <LinearGradient
-        colors={[cfg.color + '22', '#0D0D18', '#0D0D18']}
-        style={[styles.nftCard, { borderColor: cfg.color + '55' }]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      >
-        {/* Art area */}
-        <LinearGradient
-          colors={[cfg.color + '44', cfg.color + '11']}
-          style={styles.artPanel}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        >
-          <Text style={styles.artIcon}>{RARITY_ICON[nft.rarity]}</Text>
-          <View style={[styles.rarityChip, { backgroundColor: cfg.color + '33', borderColor: cfg.color }]}>
-            <Text style={[styles.rarityChipText, { color: cfg.color }]}>{nft.rarity.toUpperCase()}</Text>
+      <View style={[s.card, { borderColor: cfg.color + '40' }]}>
+        <NFTArt nft={nft} />
+        <View style={s.cardBody}>
+          <Text style={s.nftName} numberOfLines={1}>{nft.name}</Text>
+          <Text style={[s.nftRarity, { color: cfg.color }]}>{nft.rarity}</Text>
+          <View style={s.metaRow}>
+            <Text style={s.metaText}>📍 {coord}</Text>
+            <Text style={s.metaText}>📅 {date}</Text>
           </View>
-        </LinearGradient>
-
-        {/* Info */}
-        <View style={styles.cardInfo}>
-          <Text style={styles.nftName} numberOfLines={1}>{nft.name}</Text>
-          <Text style={[styles.tagline, { color: cfg.color }]}>{RARITY_TAGLINE[nft.rarity]}</Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaIcon}>📍</Text>
-            <Text style={styles.metaText} numberOfLines={1}>{coord}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaIcon}>📅</Text>
-            <Text style={styles.metaText}>{date}</Text>
-          </View>
-          <View style={styles.solanaTag}>
-            <Text style={styles.solanaTagText}>◎ Solana cNFT</Text>
+          <View style={s.solanaBadge}>
+            <Text style={s.solanaBadgeText}>◎ cNFT</Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
     </Animated.View>
   );
 }
 
-function CollectionCard({ set, nfts }: { set: typeof COLLECTION_SETS[0]; nfts: OwnedNFT[] }) {
+function CollectionBar({ set, nfts }: { set: typeof COLLECTION_SETS[0]; nfts: OwnedNFT[] }) {
   const progress = setProgress(nfts, set.required);
-  const complete = progress >= 1;
+  const done = progress >= 1;
   return (
-    <View style={[styles.setCard, complete && styles.setCardComplete]}>
-      {complete && (
-        <View style={styles.completeOverlay}>
-          <Text style={styles.completeText}>✓ COMPLETE</Text>
-        </View>
-      )}
-      <Text style={styles.setName}>{set.name}</Text>
-      <Text style={styles.setDesc}>{set.description}</Text>
-      <View style={styles.progressBar}>
-        <Animated.View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
+    <View style={[cs.card, done && cs.cardDone]}>
+      <View style={cs.header}>
+        <Text style={cs.name}>{set.name}</Text>
+        {done && <Text style={cs.check}>✓ Complete</Text>}
       </View>
-      <Text style={styles.setReward}>{set.reward}</Text>
+      <Text style={cs.desc}>{set.description}</Text>
+      <View style={cs.barBg}>
+        <View style={[cs.barFill, { width: `${Math.round(progress * 100)}%` as `${number}%`, backgroundColor: done ? C.green : C.accent }]} />
+      </View>
+      <Text style={cs.reward}>{set.reward}</Text>
     </View>
   );
 }
+
+const cs = StyleSheet.create({
+  card: { backgroundColor: C.s1, borderRadius: R.lg, padding: 16, marginBottom: 10 },
+  cardDone: { borderWidth: 1, borderColor: C.green },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  name: { color: C.t1, fontSize: 15, fontWeight: '700' },
+  check: { color: C.green, fontSize: 12, fontWeight: '700' },
+  desc: { color: C.t3, fontSize: 12, marginBottom: 10 },
+  barBg: { height: 4, backgroundColor: C.s3, borderRadius: 2, marginBottom: 8 },
+  barFill: { height: 4, borderRadius: 2 },
+  reward: { color: C.t3, fontSize: 11 },
+});
 
 export default function InventoryScreen() {
   const { stats, refreshStats } = useWallet();
@@ -127,36 +148,36 @@ export default function InventoryScreen() {
 
   return (
     <FlatList
-      style={styles.root}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00BFFF" />}
+      style={s.root}
+      contentContainerStyle={s.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.accent} />}
       ListHeaderComponent={
         <View>
-          <View style={styles.header}>
+          <View style={s.header}>
             <View>
-              <Text style={styles.title}>My NFTs</Text>
-              <Text style={styles.subtitle}>{nfts.length} collected on Solana</Text>
+              <Text style={s.pageTitle}>My NFTs</Text>
+              <Text style={s.pageSub}>{nfts.length} collected · Solana</Text>
             </View>
             {streak > 0 && (
-              <View style={styles.streakBadge}>
-                <Text style={styles.streakText}>🔥 {streak}d streak</Text>
+              <View style={s.streakBadge}>
+                <Text style={s.streakText}>🔥 {streak}d</Text>
               </View>
             )}
           </View>
 
           {COLLECTION_SETS.length > 0 && (
             <>
-              <Text style={styles.sectionTitle}>Collection Sets</Text>
-              {COLLECTION_SETS.map(set => <CollectionCard key={set.id} set={set} nfts={nfts} />)}
+              <Text style={s.section}>Collections</Text>
+              {COLLECTION_SETS.map(set => <CollectionBar key={set.id} set={set} nfts={nfts} />)}
             </>
           )}
 
-          <Text style={styles.sectionTitle}>Collected NFTs</Text>
+          <Text style={s.section}>{nfts.length > 0 ? 'Collected' : 'Start collecting'}</Text>
           {nfts.length === 0 && (
-            <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>◎</Text>
-              <Text style={styles.emptyText}>No NFTs yet</Text>
-              <Text style={styles.emptyHint}>Walk near a glowing drop and tap to claim your first NFT.</Text>
+            <View style={s.empty}>
+              <Text style={s.emptyEmoji}>◎</Text>
+              <Text style={s.emptyTitle}>No NFTs yet</Text>
+              <Text style={s.emptyHint}>Walk near a glowing drop in AR and tap to claim.</Text>
             </View>
           )}
         </View>
@@ -167,46 +188,32 @@ export default function InventoryScreen() {
       renderItem={({ item, index }) => (
         <NFTCard nft={item} anim={animsRef.current[index] ?? new Animated.Value(1)} />
       )}
-      columnWrapperStyle={styles.row}
+      columnWrapperStyle={s.row}
     />
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0A0A0F' },
-  content: { padding: 16, paddingTop: 56, paddingBottom: 40 },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+  content: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 48 },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 },
-  title: { color: '#FFF', fontSize: 28, fontWeight: '900' },
-  subtitle: { color: '#555', fontSize: 13, marginTop: 2 },
-  streakBadge: { backgroundColor: '#F39C1233', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: '#F39C12' },
-  streakText: { color: '#F39C12', fontSize: 14, fontWeight: '700' },
-  sectionTitle: { color: '#555', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12, marginTop: 8 },
-  setCard: { backgroundColor: '#111118', borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#1E1E2E', overflow: 'hidden' },
-  setCardComplete: { borderColor: '#00FF88' },
-  completeOverlay: { position: 'absolute', top: 8, right: 12 },
-  completeText: { color: '#00FF88', fontSize: 12, fontWeight: '800' },
-  setName: { color: '#FFF', fontSize: 15, fontWeight: '700', marginBottom: 4 },
-  setDesc: { color: '#666', fontSize: 12, marginBottom: 10 },
-  progressBar: { height: 4, backgroundColor: '#1E1E2E', borderRadius: 2, marginBottom: 8 },
-  progressFill: { height: 4, backgroundColor: '#00BFFF', borderRadius: 2 },
-  setReward: { color: '#444', fontSize: 11 },
+  pageTitle: { color: C.t1, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
+  pageSub: { color: C.t3, fontSize: 13, marginTop: 2 },
+  streakBadge: { backgroundColor: 'rgba(255,159,10,0.15)', borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: C.orange },
+  streakText: { color: C.orange, fontSize: 14, fontWeight: '700' },
+  section: { color: C.t3, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12, marginTop: 8 },
   row: { gap: 10, marginBottom: 10 },
   cardWrap: { flex: 1 },
-  nftCard: { flex: 1, borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
-  artPanel: { height: 110, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  artIcon: { fontSize: 42 },
-  rarityChip: { position: 'absolute', bottom: 8, right: 8, borderRadius: 8, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 2 },
-  rarityChipText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  cardInfo: { padding: 12 },
-  nftName: { color: '#FFF', fontSize: 14, fontWeight: '800', marginBottom: 2 },
-  tagline: { fontSize: 11, fontWeight: '600', marginBottom: 8 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 },
-  metaIcon: { fontSize: 10 },
-  metaText: { color: '#555', fontSize: 10, flex: 1 },
-  solanaTag: { marginTop: 8, backgroundColor: '#9B59B622', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
-  solanaTagText: { color: '#9B59B6', fontSize: 10, fontWeight: '700' },
+  card: { backgroundColor: C.s1, borderRadius: R.lg, overflow: 'hidden', borderWidth: 1 },
+  cardBody: { padding: 12 },
+  nftName: { color: C.t1, fontSize: 14, fontWeight: '700', marginBottom: 2 },
+  nftRarity: { fontSize: 11, fontWeight: '600', textTransform: 'capitalize', marginBottom: 8 },
+  metaRow: { gap: 3 },
+  metaText: { color: C.t3, fontSize: 10 },
+  solanaBadge: { marginTop: 8, backgroundColor: 'rgba(153,102,255,0.15)', borderRadius: R.sm, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
+  solanaBadgeText: { color: '#9966FF', fontSize: 9, fontWeight: '800' },
   empty: { alignItems: 'center', paddingVertical: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyText: { color: '#AAA', fontSize: 20, fontWeight: '800' },
-  emptyHint: { color: '#555', fontSize: 13, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 },
+  emptyEmoji: { fontSize: 48, color: C.t3, marginBottom: 16 },
+  emptyTitle: { color: C.t1, fontSize: 20, fontWeight: '700', marginBottom: 8 },
+  emptyHint: { color: C.t3, fontSize: 13, textAlign: 'center', paddingHorizontal: 32, lineHeight: 20 },
 });

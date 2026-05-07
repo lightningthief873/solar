@@ -14,45 +14,87 @@ import { PublicKey } from '@solana/web3.js';
 import { useWallet } from '../contexts/WalletContext';
 import { getLeaderboard } from '../solana/rpc';
 import { PROGRAM_ID } from '../utils/constants';
+import { walletAvatar, getUsername } from '../utils/avatar';
+import { C, R } from '../utils/design';
 import type { LeaderboardEntry } from '../types';
 
 const PROGRAM_PUBKEY = new PublicKey(PROGRAM_ID);
-const PODIUM_GRADIENT: Record<number, string[]> = {
-  1: ['#F39C12', '#7D5A0A'],
-  2: ['#BDC3C7', '#555'],
-  3: ['#CD7F32', '#5A3710'],
+
+const MEDAL = ['🥇', '🥈', '🥉'];
+const PODIUM_BG: Record<number, string[]> = {
+  1: ['#FFD60A', '#FF9500'],
+  2: ['#8E8E93', '#636366'],
+  3: ['#CD7F32', '#7D4A0A'],
 };
 
 function truncate(addr: string) { return `${addr.slice(0, 6)}…${addr.slice(-4)}`; }
 
-function PodiumCard({ entry }: { entry: LeaderboardEntry }) {
-  const colors = PODIUM_GRADIENT[entry.rank] ?? ['#333', '#111'];
+function Avatar({ addr, size = 40 }: { addr: string; size?: number }) {
+  const av = walletAvatar(addr);
   return (
-    <LinearGradient colors={colors} style={styles.podiumCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-      <Text style={styles.podiumRank}>#{entry.rank}</Text>
-      <Text style={styles.podiumAddr}>{truncate(entry.wallet)}</Text>
-      <Text style={styles.podiumClaims}>{entry.totalClaims} claims</Text>
-      {entry.streak > 0 && (
-        <View style={styles.streakBadge}><Text style={styles.streakText}>🔥 {entry.streak}</Text></View>
-      )}
+    <View style={[av_.ring, { width: size, height: size, borderRadius: size / 2, borderColor: av.color, backgroundColor: av.color + '22' }]}>
+      <Text style={{ fontSize: size * 0.48 }}>{av.emoji}</Text>
+    </View>
+  );
+}
+
+const av_ = StyleSheet.create({
+  ring: { borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+});
+
+function PodiumCard({ entry, myAddr }: { entry: LeaderboardEntry; myAddr?: string }) {
+  const isMe = entry.wallet === myAddr;
+  const colors = PODIUM_BG[entry.rank] ?? [C.s2, C.s1];
+  const name = entry.username || (entry.wallet === myAddr ? (getUsername() || truncate(entry.wallet)) : truncate(entry.wallet));
+  return (
+    <LinearGradient colors={colors} style={[po_.card, isMe && po_.cardMe]} start={{ x: 0, y: 0 }} end={{ x: 0.7, y: 1 }}>
+      <Text style={po_.medal}>{MEDAL[entry.rank - 1]}</Text>
+      <Avatar addr={entry.wallet} size={44} />
+      <Text style={po_.name} numberOfLines={1}>{name}</Text>
+      <Text style={po_.claims}>{entry.totalClaims}</Text>
+      <Text style={po_.claimsLabel}>claims</Text>
+      {entry.streak > 0 && <Text style={po_.streak}>🔥 {entry.streak}d</Text>}
     </LinearGradient>
   );
 }
 
+const po_ = StyleSheet.create({
+  card: { flex: 1, borderRadius: R.lg, padding: 14, alignItems: 'center', gap: 4 },
+  cardMe: { borderWidth: 2, borderColor: '#fff' },
+  medal: { fontSize: 22, marginBottom: 4 },
+  name: { color: '#fff', fontSize: 11, fontWeight: '700', marginTop: 6, textAlign: 'center' },
+  claims: { color: '#fff', fontSize: 22, fontWeight: '900', marginTop: 4, letterSpacing: -0.5 },
+  claimsLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 10 },
+  streak: { fontSize: 11, color: '#fff', marginTop: 2 },
+});
+
 function ListRow({ entry, isMe, slideAnim }: { entry: LeaderboardEntry; isMe: boolean; slideAnim: Animated.Value }) {
+  const name = entry.username || (isMe ? (getUsername() || truncate(entry.wallet)) : truncate(entry.wallet));
   return (
     <Animated.View style={{ transform: [{ translateX: slideAnim }], opacity: slideAnim.interpolate({ inputRange: [0, 60], outputRange: [1, 0] }) }}>
-      <View style={[styles.listRow, isMe && styles.listRowMe]}>
-        <Text style={styles.listRank}>#{entry.rank}</Text>
-        <Text style={[styles.listAddr, isMe && styles.listAddrMe]}>{truncate(entry.wallet)}</Text>
-        <View style={styles.listRight}>
-          <Text style={styles.listClaims}>{entry.totalClaims}</Text>
-          {entry.streak > 0 && <Text style={styles.listStreak}>🔥{entry.streak}</Text>}
+      <View style={[ro_.row, isMe && ro_.rowMe]}>
+        <Text style={ro_.rank}>#{entry.rank}</Text>
+        <Avatar addr={entry.wallet} size={36} />
+        <Text style={[ro_.name, isMe && ro_.nameMe]} numberOfLines={1}>{name}</Text>
+        <View style={ro_.right}>
+          {entry.streak > 0 && <Text style={ro_.streak}>🔥{entry.streak}</Text>}
+          <Text style={ro_.claims}>{entry.totalClaims}</Text>
         </View>
       </View>
     </Animated.View>
   );
 }
+
+const ro_ = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.s1, borderRadius: R.md, padding: 12, marginBottom: 8 },
+  rowMe: { borderWidth: 1, borderColor: C.accent },
+  rank: { color: C.t3, fontSize: 13, fontWeight: '700', width: 30 },
+  name: { color: C.t1, fontSize: 14, fontWeight: '600', flex: 1 },
+  nameMe: { color: C.accent },
+  right: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  streak: { color: C.orange, fontSize: 12 },
+  claims: { color: C.t1, fontSize: 16, fontWeight: '800', minWidth: 32, textAlign: 'right' },
+});
 
 export default function LeaderboardScreen() {
   const { wallet } = useWallet();
@@ -69,14 +111,11 @@ export default function LeaderboardScreen() {
       const data = await getLeaderboard(PROGRAM_PUBKEY);
       setEntries(data);
       slideAnims.current = data.slice(3).map(() => new Animated.Value(60));
-      Animated.stagger(40, slideAnims.current.map(a =>
+      Animated.stagger(50, slideAnims.current.map(a =>
         Animated.spring(a, { toValue: 0, friction: 8, tension: 100, useNativeDriver: true }),
       )).start();
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError(true); }
+    finally { setLoading(false); }
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -97,15 +136,15 @@ export default function LeaderboardScreen() {
   const rest = entries.slice(3);
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator color="#F39C12" size="large" /></View>;
+    return <View style={s.center}><ActivityIndicator color={C.accent} size="large" /></View>;
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>Failed to load leaderboard</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={load}>
-          <Text style={styles.retryText}>Retry</Text>
+      <View style={s.center}>
+        <Text style={s.errorText}>Couldn't load leaderboard</Text>
+        <TouchableOpacity style={s.retryBtn} onPress={load}>
+          <Text style={s.retryText}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -113,21 +152,24 @@ export default function LeaderboardScreen() {
 
   return (
     <FlatList
-      style={styles.root}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F39C12" />}
+      style={s.root}
+      contentContainerStyle={s.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.accent} />}
       ListHeaderComponent={
         <View>
-          <Text style={styles.title}>Leaderboard</Text>
-          <Text style={styles.sub}>Top collectors worldwide</Text>
+          <Text style={s.pageTitle}>Leaderboard</Text>
+          <Text style={s.pageSub}>Top collectors worldwide</Text>
           {entries.length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>No claims yet — be the first! ◎</Text>
+            <View style={s.empty}>
+              <Text style={s.emptyEmoji}>◎</Text>
+              <Text style={s.emptyText}>Be the first to claim a drop</Text>
             </View>
           ) : (
             <>
-              <View style={styles.podiumRow}>{podium.map(e => <PodiumCard key={e.wallet} entry={e} />)}</View>
-              {rest.length > 0 && <Text style={styles.sectionTitle}>Ranks 4–10</Text>}
+              <View style={s.podiumRow}>
+                {podium.map(e => <PodiumCard key={e.wallet} entry={e} myAddr={myAddr} />)}
+              </View>
+              {rest.length > 0 && <Text style={s.section}>Ranks 4–10</Text>}
             </>
           )}
         </View>
@@ -135,16 +177,21 @@ export default function LeaderboardScreen() {
       data={rest}
       keyExtractor={item => item.wallet}
       renderItem={({ item, index }) => (
-        <ListRow entry={item} isMe={item.wallet === myAddr} slideAnim={slideAnims.current[index] ?? new Animated.Value(0)} />
+        <ListRow
+          entry={item}
+          isMe={item.wallet === myAddr}
+          slideAnim={slideAnims.current[index] ?? new Animated.Value(0)}
+        />
       )}
       ListFooterComponent={
         myEntry && myEntry.rank > 10 ? (
-          <View style={styles.myRankBar}>
-            <Text style={styles.myRankText}>Your rank: #{myEntry.rank} · {myEntry.totalClaims} claims</Text>
+          <View style={s.myRankBar}>
+            <Avatar addr={myAddr!} size={32} />
+            <Text style={s.myRankText}>You · #{myEntry.rank} · {myEntry.totalClaims} claims</Text>
           </View>
         ) : myAddr && !myEntry ? (
-          <View style={styles.myRankBar}>
-            <Text style={styles.myRankText}>You are not on the leaderboard yet</Text>
+          <View style={s.myRankBar}>
+            <Text style={s.myRankText}>Claim drops to appear on the board</Text>
           </View>
         ) : null
       }
@@ -152,33 +199,20 @@ export default function LeaderboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0A0A0F' },
-  center: { flex: 1, backgroundColor: '#0A0A0F', alignItems: 'center', justifyContent: 'center' },
-  content: { padding: 16, paddingTop: 56, paddingBottom: 32 },
-  title: { color: '#FFF', fontSize: 26, fontWeight: '900', marginBottom: 2 },
-  sub: { color: '#555', fontSize: 14, marginBottom: 20 },
-  sectionTitle: { color: '#555', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginTop: 16, marginBottom: 8 },
-  podiumRow: { flexDirection: 'row', gap: 10, marginBottom: 4 },
-  podiumCard: { flex: 1, borderRadius: 14, padding: 14, alignItems: 'center' },
-  podiumRank: { color: '#000', fontSize: 20, fontWeight: '900' },
-  podiumAddr: { color: '#000', fontSize: 11, marginTop: 4, fontWeight: '600' },
-  podiumClaims: { color: '#000', fontSize: 13, fontWeight: '700', marginTop: 6 },
-  streakBadge: { backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, marginTop: 6 },
-  streakText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
-  listRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111118', borderRadius: 10, padding: 14, marginBottom: 6, borderWidth: 1, borderColor: '#222' },
-  listRowMe: { borderColor: '#F39C12', backgroundColor: 'rgba(243,156,18,0.07)' },
-  listRank: { color: '#555', fontSize: 14, fontWeight: '700', width: 36 },
-  listAddr: { color: '#CCC', fontSize: 14, flex: 1, fontWeight: '500' },
-  listAddrMe: { color: '#F39C12' },
-  listRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  listClaims: { color: '#FFF', fontSize: 14, fontWeight: '700' },
-  listStreak: { color: '#F39C12', fontSize: 12 },
-  myRankBar: { marginTop: 16, backgroundColor: 'rgba(243,156,18,0.1)', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#F39C12' },
-  myRankText: { color: '#F39C12', fontSize: 14, fontWeight: '700', textAlign: 'center' },
-  empty: { alignItems: 'center', paddingVertical: 60 },
-  emptyText: { color: '#444', fontSize: 15 },
-  errorText: { color: '#FF6B6B', fontSize: 16, fontWeight: '600', marginBottom: 16 },
-  retryBtn: { backgroundColor: '#F39C1222', borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10, borderWidth: 1, borderColor: '#F39C12' },
-  retryText: { color: '#F39C12', fontSize: 14, fontWeight: '700' },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+  center: { flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  content: { paddingTop: 60, paddingHorizontal: 16, paddingBottom: 40 },
+  pageTitle: { color: C.t1, fontSize: 34, fontWeight: '800', letterSpacing: -0.5, marginBottom: 4 },
+  pageSub: { color: C.t3, fontSize: 14, marginBottom: 24 },
+  podiumRow: { flexDirection: 'row', gap: 8, marginBottom: 24 },
+  section: { color: C.t3, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12 },
+  empty: { alignItems: 'center', paddingVertical: 80 },
+  emptyEmoji: { fontSize: 48, marginBottom: 16, color: C.t3 },
+  emptyText: { color: C.t2, fontSize: 16, fontWeight: '600' },
+  myRankBar: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, backgroundColor: C.s1, borderRadius: R.md, padding: 14, borderWidth: 1, borderColor: C.accent },
+  myRankText: { color: C.accent, fontSize: 14, fontWeight: '700', flex: 1 },
+  errorText: { color: C.red, fontSize: 16, fontWeight: '600', marginBottom: 16 },
+  retryBtn: { backgroundColor: C.s1, borderRadius: R.md, paddingHorizontal: 28, paddingVertical: 12 },
+  retryText: { color: C.t1, fontSize: 15, fontWeight: '700' },
 });

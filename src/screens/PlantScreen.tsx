@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,15 +11,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, UrlTile, PROVIDER_GOOGLE, LongPressEvent } from 'react-native-maps';
+import { TileMap } from '../components/TileMap';
+import LinearGradient from 'react-native-linear-gradient';
 import HapticFeedback from 'react-native-haptic-feedback';
+import { launchImageLibrary } from 'react-native-image-picker';
+import type { Asset } from 'react-native-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useGPS } from '../hooks/useGPS';
 import { useWallet } from '../contexts/WalletContext';
 import { addPlantedDrop } from '../solana/rpc';
 import { RARITY_CONFIG } from '../utils/constants';
-import type { Rarity, DropMode } from '../types';
+import { C, R } from '../utils/design';
+import { ART_STYLES } from '../utils/artStyles';
+import type { Rarity, DropMode, ArtStyle } from '../types';
 import type { RootTabParamList } from '../navigation/AppNavigator';
 
 const RARITIES: Rarity[] = ['common', 'rare', 'legendary', 'mythic'];
@@ -34,18 +40,22 @@ export default function PlantScreen() {
   const { wallet, plantDrop } = useWallet();
   const nav = useNavigation<Nav>();
   const slideAnim = useRef(new Animated.Value(0)).current;
-
   const [step, setStep] = useState<1 | 2>(1);
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
   const [name, setName] = useState('');
   const [mode, setMode] = useState<DropMode>('tourism');
   const [rarity, setRarity] = useState<Rarity>('common');
-  const [priceSOL, setPriceSOL] = useState(0);
+  const [artStyle, setArtStyle] = useState<ArtStyle>('default');
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [priceSOL] = useState(0);
   const [expiryIdx, setExpiryIdx] = useState(2);
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
+
+  const mapLat = gps.lat ?? 18.5204;
+  const mapLng = gps.lng ?? 73.8567;
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
@@ -60,9 +70,18 @@ export default function PlantScreen() {
     Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 120, useNativeDriver: true }).start();
   };
 
-  const handleLongPress = useCallback((e: LongPressEvent) => {
+  const placePin = useCallback(() => {
     HapticFeedback.trigger('impactMedium');
-    setPin({ lat: e.nativeEvent.coordinate.latitude, lng: e.nativeEvent.coordinate.longitude });
+    setPin({ lat: mapLat, lng: mapLng });
+  }, [mapLat, mapLng]);
+
+  const pickImage = useCallback(() => {
+    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, (response) => {
+      if (response.assets && response.assets[0]) {
+        const asset: Asset = response.assets[0];
+        if (asset.uri) setImageUri(asset.uri);
+      }
+    });
   }, []);
 
   const handlePlant = async () => {
@@ -80,20 +99,20 @@ export default function PlantScreen() {
         rarity: RARITIES.indexOf(rarity), mode: mode === 'tourism' ? 0 : 1,
         priceLamports: BigInt(Math.round(priceSOL * 1e9)), expiryTs,
       });
-      // Add to shared store so it appears in AR and map immediately
       addPlantedDrop({
         id: `drop-planted-${dropId}`,
         lat: pin.lat, lng: pin.lng,
         name: name.trim(),
-        rarity,
-        priceSOL,
+        rarity, priceSOL,
         expiresAt: mode === 'event' ? Date.now() + EXPIRY_OPTIONS[expiryIdx].ms : null,
         mode,
         claimRadius: mode === 'event' ? 10 : 15,
         isClaimed: false,
         description,
+        artStyle,
+        imageUri: imageUri ?? undefined,
       });
-      showToast('Drop planted! 🌱');
+      showToast('Drop planted!');
       setTimeout(() => nav.navigate('Explore'), 1200);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Plant failed — try again');
@@ -102,139 +121,292 @@ export default function PlantScreen() {
     }
   };
 
-  const region = { latitude: gps.lat ?? 18.5204, longitude: gps.lng ?? 73.8567, latitudeDelta: 0.002, longitudeDelta: 0.002 };
+  const cfg = RARITY_CONFIG[rarity];
+  const artDef = ART_STYLES[artStyle];
 
   return (
-    <View style={styles.root}>
-      <Animated.View style={[styles.slides, { transform: [{ translateX: slideAnim }] }]}>
-        {/* Step 1: Map */}
-        <View style={styles.slide}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Plant a Drop</Text>
-            <Text style={styles.sub}>Long-press on the map to place your drop</Text>
+    <View style={s.root}>
+      <Animated.View style={[s.slides, { transform: [{ translateX: slideAnim }] }]}>
+
+        {/* ─── Step 1: Map ─────────────────────────────────── */}
+        <View style={s.slide}>
+          <View style={s.header}>
+            <Text style={s.pageTitle}>Plant a Drop</Text>
+            <Text style={s.pageSub}>Tap "Place Here" to drop at your current location</Text>
           </View>
-          <MapView provider={PROVIDER_GOOGLE} style={styles.map} initialRegion={region} onLongPress={handleLongPress} scrollEnabled zoomEnabled rotateEnabled={false}>
-            <UrlTile urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} flipY={false} zIndex={1} />
-            {pin && <Marker coordinate={{ latitude: pin.lat, longitude: pin.lng }} title="Drop location" pinColor="#00BFFF" zIndex={2} />}
-          </MapView>
-          <TouchableOpacity style={[styles.confirmBtn, !pin && styles.confirmBtnDisabled]} onPress={goStep2} disabled={!pin}>
-            <Text style={styles.confirmBtnText}>Confirm Location →</Text>
+
+          <View style={s.mapContainer}>
+            <TileMap
+              drops={pin ? [{ id: 'pin', lat: pin.lat, lng: pin.lng, name: 'Drop Here', rarity, priceSOL: 0, expiresAt: null, mode: 'tourism', claimRadius: 15, isClaimed: false }] : []}
+              userLat={mapLat}
+              userLng={mapLng}
+              height={380}
+              onDropSelect={() => {}}
+            />
+            {/* Full-area tap target places pin at current GPS */}
+            <TouchableOpacity
+              style={s.mapOverlay}
+              onPress={placePin}
+              activeOpacity={0.7}
+            >
+              {!pin && (
+                <View style={s.tapHint}>
+                  <Text style={s.tapHintText}>Tap to place drop at your location</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {pin && (
+            <View style={s.pinConfirm}>
+              <Text style={s.pinConfirmText}>
+                📍 {pin.lat.toFixed(5)}°N, {pin.lng.toFixed(5)}°E
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[s.primaryBtn, !pin && s.primaryBtnDisabled]}
+            onPress={goStep2}
+            disabled={!pin}
+          >
+            <Text style={[s.primaryBtnText, !pin && s.primaryBtnTextDisabled]}>
+              {pin ? 'Configure Drop →' : 'Tap map to place pin'}
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Step 2: Form */}
-        <View style={styles.slide}>
-          <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
-            <Text style={styles.title}>Configure Drop</Text>
+        {/* ─── Step 2: Config form ─────────────────────────── */}
+        <View style={s.slide}>
+          <ScrollView contentContainerStyle={s.form} keyboardShouldPersistTaps="handled">
+            <Text style={s.pageTitle}>Configure</Text>
 
             {error !== '' && (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorBannerText}>{error}</Text>
-                <TouchableOpacity onPress={() => setError('')}><Text style={styles.errorBannerDismiss}>✕</Text></TouchableOpacity>
+              <View style={s.errorBox}>
+                <Text style={s.errorText}>{error}</Text>
+                <TouchableOpacity onPress={() => setError('')}><Text style={s.errorDismiss}>✕</Text></TouchableOpacity>
               </View>
             )}
 
-            <Text style={styles.fieldLabel}>Name</Text>
-            <TextInput style={styles.input} placeholder="Drop name (max 32 chars)" placeholderTextColor="#555" maxLength={32} value={name} onChangeText={setName} />
+            {/* Name */}
+            <Text style={s.fieldLabel}>Name</Text>
+            <TextInput
+              style={s.input}
+              placeholder="Drop name"
+              placeholderTextColor={C.t3}
+              maxLength={32}
+              value={name}
+              onChangeText={setName}
+            />
 
-            <Text style={styles.fieldLabel}>Mode</Text>
-            <View style={styles.toggle}>
+            {/* Mode toggle */}
+            <Text style={s.fieldLabel}>Mode</Text>
+            <View style={s.segmented}>
               {(['tourism', 'event'] as DropMode[]).map(m => (
-                <TouchableOpacity key={m} style={[styles.toggleBtn, mode === m && styles.toggleBtnActive]} onPress={() => setMode(m)}>
-                  <Text style={[styles.toggleText, mode === m && styles.toggleTextActive]}>{m === 'tourism' ? '🏛 Tourism' : '⚡ Event'}</Text>
+                <TouchableOpacity
+                  key={m}
+                  style={[s.segment, mode === m && s.segmentActive]}
+                  onPress={() => setMode(m)}
+                >
+                  <Text style={[s.segmentText, mode === m && s.segmentTextActive]}>
+                    {m === 'tourism' ? '🏛 Tourism' : '⚡ Event'}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.fieldLabel}>Rarity</Text>
-            <View style={styles.rarityRow}>
-              {RARITIES.map(r => (
-                <TouchableOpacity key={r} style={[styles.rarityCard, { borderColor: RARITY_CONFIG[r].color }, rarity === r && { backgroundColor: RARITY_CONFIG[r].color + '22' }]} onPress={() => setRarity(r)}>
-                  <Text style={[styles.rarityCardText, { color: RARITY_CONFIG[r].color }]}>{r[0].toUpperCase()}</Text>
-                  <Text style={styles.rarityCardLabel}>{r}</Text>
-                </TouchableOpacity>
-              ))}
+            {/* Rarity */}
+            <Text style={s.fieldLabel}>Rarity</Text>
+            <View style={s.rarityRow}>
+              {RARITIES.map(r => {
+                const rc = RARITY_CONFIG[r];
+                const active = rarity === r;
+                return (
+                  <TouchableOpacity
+                    key={r}
+                    style={[s.rarityCard, { borderColor: active ? rc.color : C.s3 }, active && { backgroundColor: rc.color + '18' }]}
+                    onPress={() => setRarity(r)}
+                  >
+                    <Text style={[s.rarityLetter, { color: rc.color }]}>{r[0].toUpperCase()}</Text>
+                    <Text style={[s.rarityName, active && { color: rc.color }]}>{r}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
+            {/* NFT Image */}
+            <Text style={s.fieldLabel}>NFT Image</Text>
+            <TouchableOpacity style={s.imgPicker} onPress={pickImage} activeOpacity={0.8}>
+              {imageUri ? (
+                <Image source={{ uri: imageUri }} style={s.imgPreview} resizeMode="cover" />
+              ) : (
+                <View style={s.imgPickerEmpty}>
+                  <Text style={s.imgPickerIcon}>🖼</Text>
+                  <Text style={s.imgPickerText}>Choose from Gallery</Text>
+                  <Text style={s.imgPickerSub}>Photo becomes the NFT art</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Art style (used when no custom image) */}
+            {!imageUri && (
+              <>
+                <Text style={s.fieldLabel}>Or choose art style</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.artScroll}>
+                  {(Object.entries(ART_STYLES) as [ArtStyle, typeof ART_STYLES[ArtStyle]][]).map(([key, art]) => (
+                    <TouchableOpacity
+                      key={key}
+                      style={[s.artCard, artStyle === key && s.artCardActive]}
+                      onPress={() => setArtStyle(key)}
+                    >
+                      <LinearGradient colors={art.colors.length >= 2 ? art.colors : ['#111', '#222']} style={s.artGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                        <Text style={s.artEmoji}>{art.emoji}</Text>
+                      </LinearGradient>
+                      <Text style={[s.artLabel, artStyle === key && s.artLabelActive]}>{art.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            {/* Event expiry */}
             {mode === 'event' && (
               <>
-                <Text style={styles.fieldLabel}>Expiry</Text>
-                <View style={styles.toggle}>
+                <Text style={s.fieldLabel}>Expiry</Text>
+                <View style={s.segmented}>
                   {EXPIRY_OPTIONS.map((o, i) => (
-                    <TouchableOpacity key={o.label} style={[styles.toggleBtn, expiryIdx === i && styles.toggleBtnActive]} onPress={() => setExpiryIdx(i)}>
-                      <Text style={[styles.toggleText, expiryIdx === i && styles.toggleTextActive]}>{o.label}</Text>
+                    <TouchableOpacity
+                      key={o.label}
+                      style={[s.segment, expiryIdx === i && s.segmentActive]}
+                      onPress={() => setExpiryIdx(i)}
+                    >
+                      <Text style={[s.segmentText, expiryIdx === i && s.segmentTextActive]}>{o.label}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </>
             )}
 
+            {/* Heritage description */}
             {mode === 'tourism' && (
               <>
-                <Text style={styles.fieldLabel}>Heritage description (optional)</Text>
-                <TextInput style={[styles.input, styles.inputMulti]} placeholder="Tell the story of this place…" placeholderTextColor="#555" maxLength={140} multiline value={description} onChangeText={setDescription} />
+                <Text style={s.fieldLabel}>Description (optional)</Text>
+                <TextInput
+                  style={[s.input, s.inputMulti]}
+                  placeholder="Tell the story of this place…"
+                  placeholderTextColor={C.t3}
+                  maxLength={140}
+                  multiline
+                  value={description}
+                  onChangeText={setDescription}
+                />
               </>
             )}
 
-            <Text style={styles.fieldLabel}>Preview</Text>
-            <View style={[styles.preview, { borderColor: RARITY_CONFIG[rarity].color }]}>
-              <Text style={[styles.previewName, { color: RARITY_CONFIG[rarity].color }]}>{name || 'Unnamed Drop'}</Text>
-              <Text style={styles.previewSub}>{rarity.toUpperCase()} · {mode}</Text>
+            {/* Preview card */}
+            <Text style={s.fieldLabel}>Preview</Text>
+            <View style={[s.previewCard, { borderColor: cfg.color + '60' }]}>
+              {imageUri ? (
+                <Image source={{ uri: imageUri }} style={s.previewImage} resizeMode="cover" />
+              ) : (
+                <LinearGradient colors={artDef.colors.length >= 2 ? artDef.colors : ['#111', '#222']} style={s.previewArtBand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                  <Text style={s.previewEmoji}>{artDef.emoji}</Text>
+                </LinearGradient>
+              )}
+              <View style={s.previewInfo}>
+                <Text style={[s.previewName, { color: cfg.color }]}>{name || 'Unnamed Drop'}</Text>
+                <Text style={s.previewMeta}>{rarity.toUpperCase()} · {mode}</Text>
+              </View>
             </View>
 
-            <TouchableOpacity style={[styles.plantBtn, (!name.trim() || !wallet.publicKey) && styles.plantBtnDisabled]} onPress={handlePlant} disabled={!name.trim() || !wallet.publicKey || loading}>
-              {loading ? <ActivityIndicator color="#000" /> : <Text style={styles.plantBtnText}>Plant Drop 🌱</Text>}
+            {/* Plant button */}
+            <TouchableOpacity
+              style={[s.plantBtn, (!name.trim() || !wallet.publicKey) && s.plantBtnDisabled]}
+              onPress={handlePlant}
+              disabled={!name.trim() || !wallet.publicKey || loading}
+            >
+              {loading
+                ? <ActivityIndicator color="#000" />
+                : <Text style={s.plantBtnText}>Plant Drop</Text>}
             </TouchableOpacity>
 
-            {!wallet.publicKey && <Text style={styles.connectHint}>Connect wallet in Profile tab first</Text>}
-            <TouchableOpacity onPress={goStep1} style={styles.backBtn}>
-              <Text style={styles.backText}>← Change location</Text>
+            {!wallet.publicKey && (
+              <Text style={s.connectHint}>Connect wallet in Profile tab first</Text>
+            )}
+
+            <TouchableOpacity onPress={goStep1} style={s.backBtn}>
+              <Text style={s.backText}>← Change location</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
       </Animated.View>
 
-      {toast !== '' && <View style={styles.toast}><Text style={styles.toastText}>{toast}</Text></View>}
+      {toast !== '' && (
+        <View style={s.toast}><Text style={s.toastText}>{toast}</Text></View>
+      )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0A0A0F', overflow: 'hidden' },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg, overflow: 'hidden' },
   slides: { flex: 1, flexDirection: 'row', width: SCREEN_W * 2 },
   slide: { width: SCREEN_W, flex: 1 },
   header: { paddingTop: 56, paddingHorizontal: 20, paddingBottom: 12 },
-  title: { color: '#FFF', fontSize: 24, fontWeight: '800' },
-  sub: { color: '#666', fontSize: 14, marginTop: 4 },
-  map: { flex: 1 },
-  confirmBtn: { margin: 16, backgroundColor: '#00BFFF', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  confirmBtnDisabled: { backgroundColor: '#1A1A2E' },
-  confirmBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
-  form: { padding: 20, paddingTop: 56, paddingBottom: 40 },
-  errorBanner: { backgroundColor: '#FF6B6B22', borderRadius: 10, borderWidth: 1, borderColor: '#FF6B6B', padding: 12, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  errorBannerText: { color: '#FF6B6B', fontSize: 13, flex: 1 },
-  errorBannerDismiss: { color: '#FF6B6B', fontSize: 16, marginLeft: 8 },
-  fieldLabel: { color: '#777', fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 16, textTransform: 'uppercase' },
-  input: { backgroundColor: '#1A1A2E', borderRadius: 10, color: '#FFF', padding: 14, fontSize: 15, borderWidth: 1, borderColor: '#333' },
+  pageTitle: { color: C.t1, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
+  pageSub: { color: C.t3, fontSize: 14, marginTop: 4 },
+  mapContainer: { position: 'relative' },
+  mapOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 20 },
+  tapHint: { backgroundColor: 'rgba(10,132,255,0.18)', borderRadius: R.md, paddingHorizontal: 18, paddingVertical: 10, borderWidth: 1, borderColor: C.accent },
+  tapHintText: { color: C.accent, fontSize: 14, fontWeight: '700' },
+  pinConfirm: { backgroundColor: 'rgba(48,209,88,0.1)', borderRadius: R.md, marginHorizontal: 16, marginTop: 8, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: C.green },
+  pinConfirmText: { color: C.green, fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  primaryBtn: { margin: 16, backgroundColor: C.accent, borderRadius: R.lg, paddingVertical: 17, alignItems: 'center' },
+  primaryBtnDisabled: { backgroundColor: C.s1 },
+  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  primaryBtnTextDisabled: { color: C.t3 },
+  form: { padding: 20, paddingTop: 56, paddingBottom: 48 },
+  errorBox: { backgroundColor: 'rgba(255,69,58,0.12)', borderRadius: R.md, borderWidth: 1, borderColor: C.red, padding: 12, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  errorText: { color: C.red, fontSize: 13, flex: 1 },
+  errorDismiss: { color: C.red, fontSize: 16, marginLeft: 8 },
+  fieldLabel: { color: C.t3, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10, marginTop: 20 },
+  input: { backgroundColor: C.s1, borderRadius: R.md, color: C.t1, padding: 14, fontSize: 15 },
   inputMulti: { height: 80, textAlignVertical: 'top' },
-  toggle: { flexDirection: 'row', gap: 8 },
-  toggleBtn: { flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#333', alignItems: 'center', backgroundColor: '#111' },
-  toggleBtnActive: { borderColor: '#00BFFF', backgroundColor: 'rgba(0,191,255,0.1)' },
-  toggleText: { color: '#555', fontSize: 14, fontWeight: '600' },
-  toggleTextActive: { color: '#00BFFF' },
+  segmented: { flexDirection: 'row', backgroundColor: C.s1, borderRadius: R.md, padding: 3, gap: 3 },
+  segment: { flex: 1, paddingVertical: 9, borderRadius: R.sm, alignItems: 'center' },
+  segmentActive: { backgroundColor: C.s3 },
+  segmentText: { color: C.t3, fontSize: 14, fontWeight: '600' },
+  segmentTextActive: { color: C.t1 },
   rarityRow: { flexDirection: 'row', gap: 8 },
-  rarityCard: { flex: 1, borderWidth: 2, borderRadius: 10, alignItems: 'center', paddingVertical: 12 },
-  rarityCardText: { fontSize: 20, fontWeight: '900' },
-  rarityCardLabel: { color: '#888', fontSize: 10, marginTop: 2 },
-  preview: { borderWidth: 2, borderRadius: 14, padding: 16, marginTop: 4 },
-  previewName: { fontSize: 18, fontWeight: '800' },
-  previewSub: { color: '#888', fontSize: 12, marginTop: 4 },
-  plantBtn: { backgroundColor: '#00FF88', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 24 },
-  plantBtnDisabled: { backgroundColor: '#1A1A2E' },
-  plantBtnText: { color: '#000', fontSize: 16, fontWeight: '800' },
-  connectHint: { color: '#555', textAlign: 'center', marginTop: 8, fontSize: 13 },
-  backBtn: { marginTop: 16, alignItems: 'center' },
-  backText: { color: '#555', fontSize: 14 },
-  toast: { position: 'absolute', bottom: 100, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.85)', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 },
-  toastText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  rarityCard: { flex: 1, borderWidth: 2, borderRadius: R.md, alignItems: 'center', paddingVertical: 12, backgroundColor: C.s1 },
+  rarityLetter: { fontSize: 22, fontWeight: '900' },
+  rarityName: { color: C.t3, fontSize: 10, marginTop: 2, textTransform: 'capitalize' },
+  artScroll: { marginHorizontal: -20, paddingLeft: 20 },
+  artCard: { marginRight: 10, alignItems: 'center', borderWidth: 2, borderColor: 'transparent', borderRadius: R.md, padding: 4 },
+  artCardActive: { borderColor: C.accent },
+  artGrad: { width: 64, height: 64, borderRadius: R.md, alignItems: 'center', justifyContent: 'center' },
+  artEmoji: { fontSize: 30 },
+  artLabel: { color: C.t3, fontSize: 11, marginTop: 6, fontWeight: '600' },
+  artLabelActive: { color: C.accent },
+  imgPicker: { backgroundColor: C.s1, borderRadius: R.lg, height: 120, overflow: 'hidden' },
+  imgPreview: { width: '100%', height: '100%' },
+  imgPickerEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  imgPickerIcon: { fontSize: 32 },
+  imgPickerText: { color: C.t1, fontSize: 15, fontWeight: '700' },
+  imgPickerSub: { color: C.t3, fontSize: 12 },
+  previewCard: { borderRadius: R.lg, borderWidth: 1, overflow: 'hidden', marginTop: 4 },
+  previewArtBand: { height: 80, alignItems: 'center', justifyContent: 'center' },
+  previewImage: { width: '100%', height: 100 },
+  previewEmoji: { fontSize: 36 },
+  previewInfo: { padding: 12 },
+  previewName: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+  previewMeta: { color: C.t3, fontSize: 12, marginTop: 4 },
+  plantBtn: { backgroundColor: C.green, borderRadius: R.lg, paddingVertical: 17, alignItems: 'center', marginTop: 24 },
+  plantBtnDisabled: { backgroundColor: C.s2 },
+  plantBtnText: { color: '#000', fontSize: 17, fontWeight: '800' },
+  connectHint: { color: C.t3, textAlign: 'center', marginTop: 10, fontSize: 13 },
+  backBtn: { marginTop: 20, alignItems: 'center' },
+  backText: { color: C.t3, fontSize: 14 },
+  toast: { position: 'absolute', bottom: 100, alignSelf: 'center', backgroundColor: C.s1, borderRadius: R.pill, paddingHorizontal: 20, paddingVertical: 10 },
+  toastText: { color: C.t1, fontSize: 15, fontWeight: '700' },
 });

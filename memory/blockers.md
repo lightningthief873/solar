@@ -2,76 +2,72 @@
 
 ## Resolved
 
-### libvrapi.so 16KB page alignment
-Android 15 (API 35+) requires PT_LOAD segments to be 16KB-aligned.
-ViroReact's bundled libvrapi.so had misaligned segments. Fixed by replacing
-with an NDK-compiled stub (all vrapi_ symbols as no-ops, -nostdlib, patched
-ELF offsets to 16KB boundaries). Real ARM64 devices are unaffected.
-Fix: viro_renderer-release.aar in node_modules (patched in place).
+### libvrapi.so 16KB page alignment (v1.0)
+Android 15 requires PT_LOAD segments 16KB-aligned. Fixed with NDK-compiled stub.
 
-### Metro hot reload on WSL2
-`adb reverse tcp:8081 tcp:8081` does not bridge WSL2→Windows→emulator.
-Workaround: bundle JS into APK assets with `npx react-native bundle` before
-Gradle build. Hot reload works fine on a real USB-connected device.
+### Metro on WSL2 (v1.0)
+`adb reverse` doesn't bridge WSL2→emulator. Bundle JS into APK assets before Gradle build.
 
-### ABI: x86_64 emulators
-ViroReact has no x86_64 native renderer. Only arm64-v8a builds are supported.
-Real ARM64 devices (any phone 2018+) work without workaround.
+### react-native-sensors jcenter() (v1.0)
+Patched `node_modules/react-native-sensors/android/build.gradle` to use `mavenCentral()`.
 
-### react-native-sensors using jcenter()
-`jcenter()` was removed from Gradle 9. Fixed by patching
-`node_modules/react-native-sensors/android/build.gradle` to use `mavenCentral()`.
-Must be re-applied after a clean `yarn install`.
+### Anchor 1.0.2 CpiContext API (v1.0)
+`CpiContext::new` takes `Pubkey` not `AccountInfo` in Anchor 1.0+. Fixed.
 
-### Anchor 1.0.2 CpiContext API change
-`CpiContext::new` takes `Pubkey` (not `AccountInfo`) in Anchor 1.0+.
-Fixed in all instructions: pass `ctx.accounts.system_program.key()` not `.to_account_info()`.
-
-### `init_if_needed` compile error
-Requires `anchor-lang = { version = "1.0.2", features = ["init-if-needed"] }` in Cargo.toml.
-Fixed.
-
-### Bubblegum v5 TransactionBuilder double-await
-`createTree()` and `mintV1()` return `Promise<TransactionBuilder>`.
-Must `await (await builder).sendAndConfirm(umi)`. Fixed in mintCNFT.ts.
-
-### Devnet airdrop rate limit during deploy
-Needed 1.71 SOL for program deploy; devnet faucet rate-limited.
+### Devnet airdrop rate limit (v1.0)
 Deployed to Testnet instead. Program ID unchanged.
-Recovered a stuck buffer via: `solana program close <BUFFER_ADDR> --url testnet --bypass-warning`
+
+### Google Maps blank canvas (v2.0)
+`react-native-maps` with `PROVIDER_GOOGLE` showed blank canvas even with API key in AndroidManifest.
+Root cause: Maps SDK for Android not enabled in GCP, or billing not set up.
+Fix: replaced with self-contained LeafletMap (WebView + inline JS, OSM tiles).
+
+### LeafletMap CDN failure (v2.0)
+First LeafletMap version loaded Leaflet from unpkg.com CDN. Failed silently in Android WebView.
+Fix: rewrote HTML to inline all JS — tile rendering, pan, zoom, markers, popups — with no external deps.
+
+### LeafletMap in PlantScreen broke pin placement (v2.0)
+LeafletMap's `height="100%"` collapsed inside flex container with siblings.
+WebView message passing also unreliable for the pin use-case.
+Fix: reverted Plant Step 1 to TileMap + overlay TouchableOpacity (places pin at GPS). Works reliably.
+
+### npm peer dep conflicts (v2.0)
+react 19 conflicts with react-native-webview and react-native-image-picker peer deps.
+Fix: `npm install --legacy-peer-deps`.
+
+---
 
 ## Active
 
 ### Merkle tree not initialised
-A Bubblegum merkle tree must be created on-chain before cNFT minting works
-end-to-end. `mintCNFT.ts` has the code; it just needs a real tree address.
-Fix: run `createTree()` once from `src/solana/mintCNFT.ts`, save the address
-to `constants.ts`, and pass it through the `claimDrop` flow in WalletContext.
+Bubblegum merkle tree must be created on-chain before cNFT minting works end-to-end.
+`mintCNFT.ts` has the code; needs a real tree address.
+Fix: run `createTree()` once, save address to `constants.ts`, wire through `claimDrop()`.
 
 ### Program on Testnet, not Devnet
-`DEVNET_RPC` in `constants.ts` points to `https://api.testnet.solana.com`.
-To move to devnet: fund wallet `8R1fJhGaUH5JovHLYgatv7hDAdxFNRo6nf5cREtPVPwF`
-with 2+ SOL then:
-```
-cd anchor && anchor program deploy --url devnet target/deploy/solar_program.so
-```
-Then update `DEVNET_RPC` in `constants.ts` to `https://api.devnet.solana.com`.
+`DEVNET_RPC` in `constants.ts` = `https://api.testnet.solana.com`.
+Devnet needs 2+ SOL to redeploy. Fund `8R1fJhGaUH5JovHLYgatv7hDAdxFNRo6nf5cREtPVPwF`.
 
 ### NFT metadata uses placeholder URI
-`mintCNFT.ts` passes a static metadata URI. Real mints need per-rarity JSON
-uploaded to Arweave/IPFS first. Wire `@metaplex-foundation/umi-uploader-irys`
-before a production release.
+`mintCNFT.ts` passes a static URI. Real mints need per-drop JSON + image on Arweave.
+Wire `@metaplex-foundation/umi-uploader-irys` and upload before minting.
 
-### OwnedNFT store is in-memory only
-`addOwnedNFT` / `getOwnedNFTs` in `rpc.ts` use a module-level array.
-NFTs are lost on app restart. Replace with AsyncStorage or a proper
-chain-event indexer (Helius webhooks) for production.
+### OwnedNFT + username stores are in-memory
+`addOwnedNFT`/`getOwnedNFTs` in `rpc.ts` and `_username` in `avatar.ts` reset on restart.
+Fix: AsyncStorage for username; Helius webhook indexer for NFTs.
+
+### Image URIs are local device paths
+`Drop.imageUri` and `OwnedNFT.imageUri` store `content://` paths on the planter's device.
+Other users who claim the drop won't see the image (URI is device-local).
+Fix: upload to Arweave/IPFS on plant, store HTTPS URI in the metadata.
+
+---
 
 ## Deferred
 
-- iOS support (requires ARKit + macOS Xcode build)
+- iOS support (requires ARKit + macOS Xcode)
 - Mainnet deployment
-- Sound effects (react-native-sound + audio assets needed)
-- x86_64 emulator AR support (no ViroReact renderer available)
+- Sound effects (react-native-sound)
 - Push notifications (Firebase Cloud Messaging)
-- Creator analytics dashboard (6th screen)
+- Creator analytics dashboard
+- x86_64 emulator AR (no ViroReact renderer)
