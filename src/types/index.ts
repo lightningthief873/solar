@@ -12,6 +12,24 @@ export interface Drop {
   mode: DropMode;
   claimRadius: number;
   isClaimed: boolean;
+  creator?: string;
+  description?: string;
+}
+
+export interface OwnedNFT {
+  id: string;
+  dropId: string;
+  name: string;
+  rarity: Rarity;
+  claimedAt: number;
+  imageUri?: string;
+}
+
+export interface LeaderboardEntry {
+  wallet: string;
+  totalClaims: number;
+  streak: number;
+  rank: number;
 }
 
 export interface CollectorStats {
@@ -27,4 +45,12 @@ export interface RarityConfig {
   glowIntensity: number;
   claimRadius: number;
   particleEffect: string;
+}
+
+export interface CollectionSet {
+  id: string;
+  name: string;
+  description: string;
+  required: Partial<Record<Rarity, number>>;
+  reward: string;
 }

@@ -1,6 +1,6 @@
 # Build Progress
 
-## Overall Status: PHASE 3 COMPLETE ✓ (deploy pending SOL)
+## Overall Status: PHASE 4 COMPLETE ✓
 
 ---
 
@@ -87,10 +87,26 @@
 
 ---
 
-## Prompt 4 — All App Flows
+## Prompt 4 — All App Flows ✓ DONE
 
-- [ ] Bottom tab navigator: Explore / Plant / Inventory / Leaderboard
-- [ ] All 5 screens built out
+- [x] AppNavigator: 5-tab bottom nav (Explore/Plant/Inventory/Leaderboard/Profile)
+- [x] ExploreScreen: AR + wallet pill + RadarRing + mini-map toggle + BottomSheet claim
+      Claim flow: haptics + shake animation on error + countdown for event drops
+- [x] PlantScreen: 2-step (map long-press pin → configure form) + plantDrop() call
+- [x] InventoryScreen: 2-col NFT grid (LinearGradient) + collection set progress bars
+- [x] LeaderboardScreen: podium top-3 (gold/silver/bronze) + list rows 4-10 + 30s refresh
+- [x] ProfileScreen: wallet card + stats grid + SOL balance + dev airdrop (testnet only)
+- [x] App.tsx: WalletProvider → GestureHandlerRootView → AppNavigator (18 lines)
+- [x] tsc --noEmit: 0 errors
+- [x] Commit: "feat: all screens + full claim/plant/inventory/leaderboard flows"
+
+### Phase 4 key facts
+- react-navigation/bottom-tabs v7 with emoji tab icons (no image assets needed)
+- LinearGradient for NFT cards + leaderboard podium (react-native-linear-gradient)
+- ExploreScreen 199 lines (200-line limit enforced — split if adding more)
+- getLeaderboard() reads binary PDA: skip 12 bytes (8 discriminator + 4 vec len), 40-byte entries
+- OwnedNFT store is in-memory in rpc.ts (addOwnedNFT / getOwnedNFTs)
+- IS_TESTNET detected from DEVNET_RPC URL substring — dev airdrop hidden on mainnet
 
 ## Prompt 5 — Polish + Win Layer + APK
 
@@ -99,13 +115,12 @@
 
 ## Current Focus
 
-Prompt 4
+Prompt 5
 
 ## Last Session
 
-2026-05-07: Completed Phase 3. Full Anchor program compiles (plant_drop, claim_drop,
-expire_drop, record_streak + 3 PDAs). Anchor 1.0.2 quirks resolved: CpiContext
-takes Pubkey, init-if-needed needs cargo feature, pub(crate) handlers avoid
-re-export collision. IDL generated. TypeScript layer complete: rpc.ts, useMWA.ts,
-mintCNFT.ts, WalletContext.tsx. tsc --noEmit clean. Blocked on devnet deploy
-(SOL needed — use faucet.solana.com with GitHub auth).
+2026-05-07: Completed Phase 4. All 5 screens built (ExploreScreen, PlantScreen,
+InventoryScreen, LeaderboardScreen, ProfileScreen). AppNavigator wired. App.tsx
+replaced. tsc clean. Committed. Phase 3 program live on testnet.
+Devnet deploy deferred until wallet funded (need 2+ SOL at
+8R1fJhGaUH5JovHLYgatv7hDAdxFNRo6nf5cREtPVPwF).
