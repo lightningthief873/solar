@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Clipboard,
   StyleSheet,
@@ -31,7 +32,7 @@ function truncate(addr: string) {
 export default function ExploreScreen() {
   const gps = useGPS();
   const compass = useCompass();
-  const { wallet, claimDrop } = useWallet();
+  const { wallet, connect, claimDrop } = useWallet();
   const [drops, setDrops] = useState<Drop[]>(SEED_DROPS);
   const [selected, setSelected] = useState<Drop | null>(null);
   const [showMap, setShowMap] = useState(false);
@@ -121,12 +122,21 @@ export default function ExploreScreen() {
         onEnterRange={handleEnterRange}
       />
 
-      {wallet.publicKey && (
+      {wallet.publicKey ? (
         <TouchableOpacity
-          style={styles.walletPill}
+          style={[styles.walletPill, wallet.isDemoMode && styles.walletPillDemo]}
           onPress={() => { Clipboard.setString(wallet.publicKey!.toBase58()); showToast('Copied!'); }}
         >
-          <Text style={styles.walletText}>{truncate(wallet.publicKey.toBase58())}</Text>
+          <Text style={styles.walletText}>
+            {wallet.isDemoMode ? '⚡ Demo — ' : '◎ '}
+            {truncate(wallet.publicKey.toBase58())}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity style={styles.connectBtn} onPress={connect} disabled={wallet.isConnecting}>
+          {wallet.isConnecting
+            ? <ActivityIndicator color="#000" size="small" />
+            : <Text style={styles.connectBtnText}>Connect Wallet</Text>}
         </TouchableOpacity>
       )}
 
@@ -183,7 +193,10 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
   walletPill: { position: 'absolute', top: 48, left: 16, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(0,191,255,0.4)' },
+  walletPillDemo: { borderColor: 'rgba(255,152,0,0.6)' },
   walletText: { color: '#00BFFF', fontSize: 12, fontWeight: '600' },
+  connectBtn: { position: 'absolute', top: 48, left: 16, backgroundColor: '#4A90E2', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, minWidth: 130, alignItems: 'center' },
+  connectBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
   radarWrap: { position: 'absolute', top: 40, right: 16 },
   nearbyBadge: { position: 'absolute', bottom: 80, right: 16, backgroundColor: 'rgba(0,0,0,0.7)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
   nearbyText: { color: '#CCC', fontSize: 12 },

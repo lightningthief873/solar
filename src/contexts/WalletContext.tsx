@@ -92,8 +92,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const claimDrop = useCallback(
     async ({ dropId, creator, userLat, userLng, rarity }: ClaimParams): Promise<string> => {
+      if (!wallet.publicKey) throw new Error('Wallet not connected');
+
+      // Demo mode: simulate claim success without chain submission
+      if (wallet.isDemoMode) {
+        await new Promise(r => setTimeout(r, 1200));
+        console.log(`[demo] claimed ${rarity} drop ${dropId}`);
+        return 'demo-claim-' + Date.now().toString(16);
+      }
+
       const program = await getProgram();
-      const pubkey = wallet.publicKey!;
+      const pubkey = wallet.publicKey;
       const [dropPDA] = dropStatePDA(creator, dropId, PROGRAM_ID);
       const [collectorPDA] = collectorStatePDA(pubkey, PROGRAM_ID);
 
@@ -104,28 +113,28 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           new BN(Math.round(userLat * 1e7)),
           new BN(Math.round(userLng * 1e7)),
         )
-        .accounts({
-          dropState: dropPDA,
-          collectorState: collectorPDA,
-          creator,
-          claimer: pubkey,
-        })
+        .accounts({ dropState: dropPDA, collectorState: collectorPDA, creator, claimer: pubkey })
         .rpc() as string;
 
-      // Off-chain cNFT mint after on-chain claim confirms
-      // payerKeypair would come from a server signer in production;
-      // for hackathon demo we skip actual mint and log intent
       console.log(`[mintCNFT] would mint ${rarity} cNFT for drop ${dropId} to ${pubkey.toBase58()}`);
-
-      return sig as string;
+      return sig;
     },
-    [getProgram, wallet.publicKey],
+    [getProgram, wallet.publicKey, wallet.isDemoMode],
   );
 
   const plantDrop = useCallback(
     async ({ dropId, lat, lng, rarity, mode, priceLamports, expiryTs }: PlantParams): Promise<string> => {
+      if (!wallet.publicKey) throw new Error('Wallet not connected');
+
+      // Demo mode: simulate plant success without chain submission
+      if (wallet.isDemoMode) {
+        await new Promise(r => setTimeout(r, 1200));
+        console.log(`[demo] planted drop ${dropId} at ${lat.toFixed(5)},${lng.toFixed(5)}`);
+        return 'demo-plant-' + Date.now().toString(16);
+      }
+
       const program = await getProgram();
-      const pubkey = wallet.publicKey!;
+      const pubkey = wallet.publicKey;
       const [dropPDA] = dropStatePDA(pubkey, dropId, PROGRAM_ID);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,9 +151,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         .accounts({ dropState: dropPDA, creator: pubkey })
         .rpc() as string;
 
-      return sig as string;
+      return sig;
     },
-    [getProgram, wallet.publicKey],
+    [getProgram, wallet.publicKey, wallet.isDemoMode],
   );
 
   const refreshStats = useCallback(async () => {

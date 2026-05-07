@@ -91,6 +91,11 @@ export default function ProfileScreen() {
         <Text style={styles.cardTitle}>Wallet</Text>
         {wallet.publicKey ? (
           <>
+            {wallet.isDemoMode && (
+              <View style={styles.demoBadge}>
+                <Text style={styles.demoText}>Demo Mode — no wallet app found</Text>
+              </View>
+            )}
             <TouchableOpacity
               onPress={() => {
                 Clipboard.setString(wallet.publicKey!.toBase58());
@@ -102,7 +107,7 @@ export default function ProfileScreen() {
               <Text style={styles.copyIcon}>⎘</Text>
             </TouchableOpacity>
             <Text style={styles.balance}>
-              {solBalance !== null ? `${solBalance.toFixed(4)} SOL` : '—'}
+              {wallet.isDemoMode ? 'Demo Wallet' : solBalance !== null ? `${solBalance.toFixed(4)} SOL` : '—'}
             </Text>
             <TouchableOpacity style={styles.disconnectBtn} onPress={disconnect}>
               <Text style={styles.disconnectText}>Disconnect</Text>
@@ -170,6 +175,8 @@ const styles = StyleSheet.create({
   balance: { color: '#FFF', fontSize: 28, fontWeight: '900', marginTop: 8 },
   connectBtn: { backgroundColor: '#4A90E2', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   connectText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  demoBadge: { backgroundColor: '#FF980022', borderWidth: 1, borderColor: '#FF9800', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginBottom: 10 },
+  demoText: { color: '#FF9800', fontSize: 12, fontWeight: '600' },
   disconnectBtn: { marginTop: 14, borderWidth: 1, borderColor: '#333', borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
   disconnectText: { color: '#666', fontSize: 14 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

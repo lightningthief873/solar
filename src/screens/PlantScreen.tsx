@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, LongPressEvent } from 'react-native-maps';
+import MapView, { Marker, UrlTile, LongPressEvent } from 'react-native-maps';
 import HapticFeedback from 'react-native-haptic-feedback';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -99,7 +99,8 @@ export default function PlantScreen() {
             <Text style={styles.title}>Plant a Drop</Text>
             <Text style={styles.sub}>Long-press on the map to place your drop</Text>
           </View>
-          <MapView style={styles.map} region={region} onLongPress={handleLongPress}>
+          <MapView style={styles.map} mapType="none" region={region} onLongPress={handleLongPress}>
+            <UrlTile urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} flipY={false} shouldReplaceMapContent zIndex={-1} />
             {pin && <Marker coordinate={{ latitude: pin.lat, longitude: pin.lng }} title="Drop location" pinColor="#00BFFF" />}
           </MapView>
           <TouchableOpacity style={[styles.confirmBtn, !pin && styles.confirmBtnDisabled]} onPress={goStep2} disabled={!pin}>
