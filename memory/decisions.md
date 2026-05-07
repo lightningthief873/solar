@@ -38,4 +38,9 @@ Implemented as a React Native overlay above the AR view, not inside ViroReact.
 
 ## Program ID
 
-TBD — fill in after `anchor deploy` in Prompt 3.
+EXNrAhbDZgXchu6D8i1Gup47qgKkMkTuC6FR6ehZqkQ7
+
+Deployed 2026-05-07 on Solana Testnet (devnet airdrop rate-limited).
+Upgrade authority: 8R1fJhGaUH5JovHLYgatv7hDAdxFNRo6nf5cREtPVPwF
+Deploy tx: XFEKQ8r1Ja6f8LoSXwzmNvybMMj48oyJKmdHU86jjNipjG5vTjVLHYbwQxwmy9DRfX5oMTeMnAQuNmepSGLXNcf
+To migrate to devnet: fund wallet with 2+ SOL then `cd anchor && anchor program deploy --url devnet target/deploy/solar_program.so`

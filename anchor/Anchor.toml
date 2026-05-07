@@ -11,8 +11,11 @@ solar_program = "EXNrAhbDZgXchu6D8i1Gup47qgKkMkTuC6FR6ehZqkQ7"
 [programs.devnet]
 solar_program = "EXNrAhbDZgXchu6D8i1Gup47qgKkMkTuC6FR6ehZqkQ7"
 
+[programs.testnet]
+solar_program = "EXNrAhbDZgXchu6D8i1Gup47qgKkMkTuC6FR6ehZqkQ7"
+
 [provider]
-cluster = "devnet"
+cluster = "testnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

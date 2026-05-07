@@ -70,14 +70,15 @@
 - [x] App.tsx: wrapped in WalletProvider
 - [x] TypeScript clean (tsc --noEmit passes)
 - [x] Commit: "feat: Anchor program compiled + MWA + Bubblegum cNFT layer"
-- [ ] anchor deploy — BLOCKED: devnet SOL airdrop rate-limited
+- [x] anchor deploy — LIVE on testnet (devnet needs 2+ SOL)
 
 ### Phase 3 key facts
 - Platform-tools v1.52 (496MB) — must be manually extracted if download fails:
   `cd ~/.local/share/solana/install/releases/stable-.../platform-tools-sdk/sbf/dependencies/platform-tools && tar -xjf tmp-*.tar.bz2`
 - anchor-lang 1.0.2: CpiContext::new(program_pubkey, accounts) — NOT AccountInfo
 - pub(crate) fn handler in each instruction file (avoids re-export name clash)
-- Devnet wallet: 8R1fJhGaUH5JovHLYgatv7hDAdxFNRo6nf5cREtPVPwF — needs SOL via faucet.solana.com
+- Program deployed testnet: EXNrAhbDZgXchu6D8i1Gup47qgKkMkTuC6FR6ehZqkQ7
+- SOLAR_RPC in constants.ts = testnet (update to devnet when funded)
 
 ### Deploy steps (when SOL available)
 1. cd anchor && anchor deploy

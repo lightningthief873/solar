@@ -34,7 +34,7 @@ export function useMWA() {
     try {
       await transact(async (mobileWallet: Web3MobileWallet) => {
         const { accounts } = await mobileWallet.authorize({
-          cluster: 'devnet',
+          cluster: 'testnet',
           identity: APP_IDENTITY,
         });
         const pubkey = new PublicKey(accounts[0].address);
@@ -59,7 +59,7 @@ export function useMWA() {
     async (tx: Transaction | VersionedTransaction): Promise<string> => {
       return transact(async (mobileWallet: Web3MobileWallet) => {
         const { accounts } = await mobileWallet.authorize({
-          cluster: 'devnet',
+          cluster: 'testnet',
           identity: APP_IDENTITY,
         });
         const pubkey = new PublicKey(accounts[0].address);

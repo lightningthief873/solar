@@ -31,6 +31,6 @@ export const RARITY_CONFIG: Record<Rarity, RarityConfig> = {
   },
 };
 
-export const DEVNET_RPC = 'https://api.devnet.solana.com';
+export const DEVNET_RPC = 'https://api.testnet.solana.com'; // program deployed on testnet; swap to devnet once funded
 export const MAX_RADAR_DISTANCE = 200;
 export const CLAIM_COOLDOWN_MS = 3000;
